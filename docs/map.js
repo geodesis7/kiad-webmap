@@ -1,6 +1,6 @@
 async function initMap() {
   const map = new google.maps.Map(document.getElementById("map"), {
-    center: { lat: 40.90, lng: 42.50 },
+    center: { lat: 40.90, lng: 40.50 },
     zoom: 10,
   });
 
