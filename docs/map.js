@@ -11,20 +11,31 @@ async function initMap() {
     const response = await fetch(geojsonUrl);
     const data = await response.json();
 
+    // GeoJSON'u ekle
     map.data.addGeoJson(data);
 
-    map.data.setStyle({
-      icon: {
-        path: google.maps.SymbolPath.CIRCLE,
-        scale: 4,
-        strokeColor: "#FF0000",
-        fillColor: "#FF0000",
-        fillOpacity: 1,
-      },
+    // Nokta stilini ayarla
+    map.data.setStyle((feature) => {
+      const kmLabel = feature.getProperty("km"); // etiket için gerekli
+
+      return {
+        icon: {
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 4,              // nokta boyutu
+          fillColor: "#007aff",  // mavi
+          fillOpacity: 1,
+          strokeColor: "#0051a8",
+          strokeWeight: 1,
+        },
+        label: {
+          text: kmLabel,
+          fontSize: "12px",
+          color: "#1e1e1e",
+        },
+      };
     });
 
   } catch (error) {
     console.error("GeoJSON yüklenemedi:", error);
   }
 }
-
