@@ -1,1 +1,1 @@
-# kiad-gis-server
+KIAD GeoJSON & Web Map data
