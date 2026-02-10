@@ -1,7 +1,7 @@
 async function initMap() {
   const map = new google.maps.Map(document.getElementById("map"), {
-    center: { lat: 40.77, lng: 43.10 },
-    zoom: 11,
+    center: { lat: 40.90, lng: 42.50 },
+    zoom: 10,
   });
 
   const geojsonUrl =
@@ -21,7 +21,7 @@ async function initMap() {
       return {
         icon: {
           path: google.maps.SymbolPath.CIRCLE,
-          scale: 4,              // nokta boyutu
+          scale: 3,              // nokta boyutu
           fillColor: "#007aff",  // mavi
           fillOpacity: 1,
           strokeColor: "#0051a8",
