@@ -16,10 +16,24 @@
   <script src="https://unpkg.com/maplibre-gl@3.6.1/dist/maplibre-gl.js"></script>
   <script>
     const map = new maplibregl.Map({
-      container: 'map',
-      style: 'https://demotiles.maplibre.org/style.json',
-      center: [43.21, 40.67],
-      zoom: 10
+  container: "map",
+  style: {
+    version: 8,
+    sources: {
+      "raster-tiles": {
+        type: "raster",
+        tiles: [
+          "https://mt0.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",
+          "https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",
+          "https://mt2.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",
+          "https://mt3.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",
+        ],
+        tileSize: 256,
+      },
+    },
+    layers: [{ id: "raster-layer", type: "raster", source: "raster-tiles" }],
+	},
+
     });
 
     map.on('load', () => {
