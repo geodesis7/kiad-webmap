@@ -1,7 +1,7 @@
 async function initMap() {
   const map = new google.maps.Map(document.getElementById("map"), {
-    center: { lat: 40.90, lng: 40.50 },
-    zoom: 10,
+    center: { lat: 44.0042145, lng: 39.9326961 },
+    zoom: 13,
   });
 
   const geojsonUrl =
