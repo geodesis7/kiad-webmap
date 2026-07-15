@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>KIAD WebGIS</title>
+
+    <link
+        href="https://unpkg.com/maplibre-gl@5.6.2/dist/maplibre-gl.css"
+        rel="stylesheet"
+    >
+
+    <link
+        rel="stylesheet"
+        href="./styles.css"
+    >
+</head>
+
+<body>
+
+    <header class="app-header">
+        <div>
+            <h1>KIAD WebGIS</h1>
+            <span>Kars–Iğdır–Aralık–Dilucu Demiryolu Projesi</span>
+        </div>
+    </header>
+
+    <main class="app-container">
+
+        <aside class="sidebar">
+
+            <h2>Katmanlar</h2>
+
+            <label class="layer-item">
+                <input
+                    id="assets-toggle"
+                    type="checkbox"
+                    checked
+                >
+                <span>Proje Varlıkları</span>
+            </label>
+
+            <div class="status-box">
+                <strong>Veri kaynağı</strong>
+                <span>PostGIS / pg_tileserv</span>
+            </div>
+
+        </aside>
+
+        <section id="map"></section>
+
+    </main>
+
+    <script src="https://unpkg.com/maplibre-gl@5.6.2/dist/maplibre-gl.js"></script>
+    <script src="./map.js"></script>
+
+</body>
+</html>
