@@ -46,17 +46,20 @@ map.addControl(
 
 map.on("load", () => {
 
-    // pg_tileserv Vector Tile kaynağı
     map.addSource("assets-source", {
         type: "vector",
-        url: "https://kiad.tr/tiles/public.assets.json"
+        tiles: [
+            "https://kiad.tr/tiles/public.assets/{z}/{x}/{y}.pbf"
+        ],
+        minzoom: 0,
+        maxzoom: 22,
+        bounds: [
+            43.213181901707514,
+            39.65029208702538,
+            44.80661416668261,
+            40.688585809429775
+        ]
     });
-
-    /*
-     * Assets tablosunda farklı geometri tipleri bulunabileceği
-     * için ilk aşamada çizgi, poligon ve nokta katmanlarını
-     * ayrı ayrı tanımlıyoruz.
-     */
 
     map.addLayer({
         id: "assets-polygons",
@@ -115,8 +118,17 @@ map.on("load", () => {
         }
     });
 
+    map.fitBounds(
+        [
+            [43.213181901707514, 39.65029208702538],
+            [44.80661416668261, 40.688585809429775]
+        ],
+        {
+            padding: 40,
+            duration: 1000
+        }
+    );
 });
-
     const interactiveLayers = [
         "assets-polygons",
         "assets-lines",
