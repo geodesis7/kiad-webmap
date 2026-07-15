@@ -46,14 +46,11 @@ map.addControl(
 
 map.on("load", () => {
 
+    // pg_tileserv Vector Tile kaynağı
     map.addSource("assets-source", {
-    type: "vector",
-    tiles: [
-        "https://kiad.tr/tiles/public.assets/{z}/{x}/{y}.pbf"
-    ],
-    minzoom: 0,
-    maxzoom: 22
-});
+        type: "vector",
+        url: "https://kiad.tr/tiles/public.assets.json"
+    });
 
     /*
      * Assets tablosunda farklı geometri tipleri bulunabileceği
@@ -117,6 +114,8 @@ map.on("load", () => {
             "circle-stroke-width": 2
         }
     });
+
+});
 
     const interactiveLayers = [
         "assets-polygons",
