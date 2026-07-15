@@ -13,8 +13,7 @@ const map = new maplibregl.Map({
                     "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
                 ],
                 tileSize: 256,
-                attribution:
-                    "&copy; OpenStreetMap contributors"
+                attribution: "&copy; OpenStreetMap contributors"
             }
         },
 
@@ -27,8 +26,8 @@ const map = new maplibregl.Map({
         ]
     },
 
-    center: [43.5, 40.0],
-    zoom: 7.5
+    center: [44.009898, 40.169439],
+    zoom: 8
 });
 
 map.addControl(
@@ -46,6 +45,10 @@ map.addControl(
 
 map.on("load", () => {
 
+    /*
+     * pg_tileserv üzerinden yayınlanan public.assets
+     * vektör tile kaynağı.
+     */
     map.addSource("assets-source", {
         type: "vector",
         tiles: [
@@ -61,6 +64,9 @@ map.on("load", () => {
         ]
     });
 
+    /*
+     * Polygon ve MultiPolygon geometrileri.
+     */
     map.addLayer({
         id: "assets-polygons",
         type: "fill",
@@ -80,6 +86,9 @@ map.on("load", () => {
         }
     });
 
+    /*
+     * LineString ve MultiLineString geometrileri.
+     */
     map.addLayer({
         id: "assets-lines",
         type: "line",
@@ -98,6 +107,9 @@ map.on("load", () => {
         }
     });
 
+    /*
+     * Point ve MultiPoint geometrileri.
+     */
     map.addLayer({
         id: "assets-points",
         type: "circle",
@@ -118,6 +130,9 @@ map.on("load", () => {
         }
     });
 
+    /*
+     * Haritayı assets tablosunun kapsadığı alana yaklaştırır.
+     */
     map.fitBounds(
         [
             [43.213181901707514, 39.65029208702538],
@@ -128,7 +143,12 @@ map.on("load", () => {
             duration: 1000
         }
     );
-});
+
+    /*
+     * Tıklanabilir katmanlar.
+     * Bu bölüm load bloğu içinde olmalı; çünkü katmanların
+     * önce map.addLayer ile oluşturulması gerekiyor.
+     */
     const interactiveLayers = [
         "assets-polygons",
         "assets-lines",
@@ -154,7 +174,6 @@ map.on("load", () => {
             }
 
             const properties = feature.properties ?? {};
-
             const popupHtml = createPopupHtml(properties);
 
             new maplibregl.Popup({
@@ -170,49 +189,52 @@ map.on("load", () => {
 
 const assetsToggle = document.getElementById("assets-toggle");
 
-assetsToggle.addEventListener("change", (event) => {
+if (assetsToggle) {
+    assetsToggle.addEventListener("change", (event) => {
 
-    const visibility = event.target.checked
-        ? "visible"
-        : "none";
+        const visibility = event.target.checked
+            ? "visible"
+            : "none";
 
-    [
-        "assets-polygons",
-        "assets-lines",
-        "assets-points"
-    ].forEach((layerId) => {
+        [
+            "assets-polygons",
+            "assets-lines",
+            "assets-points"
+        ].forEach((layerId) => {
 
-        if (map.getLayer(layerId)) {
-            map.setLayoutProperty(
-                layerId,
-                "visibility",
-                visibility
-            );
-        }
+            if (map.getLayer(layerId)) {
+                map.setLayoutProperty(
+                    layerId,
+                    "visibility",
+                    visibility
+                );
+            }
+        });
     });
-});
+}
 
 function createPopupHtml(properties) {
 
     const assetName =
-        properties.asset_name ??
         properties.name ??
+        properties.asset_code ??
         properties.asset_id ??
         "Proje Varlığı";
 
     const rows = Object.entries(properties)
         .filter(([, value]) => {
-            return value !== null &&
-                   value !== undefined &&
-                   value !== "";
+            return (
+                value !== null &&
+                value !== undefined &&
+                value !== ""
+            );
         })
         .slice(0, 10)
         .map(([key, value]) => {
-
             return `
                 <div class="popup-row">
                     <span class="popup-label">
-                        ${escapeHtml(key)}
+                        ${escapeHtml(String(key))}
                     </span>
 
                     <span>
@@ -235,7 +257,6 @@ function createPopupHtml(properties) {
 }
 
 function escapeHtml(value) {
-
     return value
         .replaceAll("&", "&amp;")
         .replaceAll("<", "&lt;")
