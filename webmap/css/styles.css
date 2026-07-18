@@ -1,7 +1,9 @@
 @import url("./layout.css");
 @import url("./sidebar.css");
+@import url("./map-tools.css");
 @import url("./popup.css");
 @import url("./dashboard.css");
+
 
 :root {
     --color-primary-950: #081a2e;

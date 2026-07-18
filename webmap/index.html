@@ -12,7 +12,7 @@
 
     <link href="https://unpkg.com/maplibre-gl@5.6.2/dist/maplibre-gl.css" rel="stylesheet">
 
-    <link rel="stylesheet" href="./css/styles.css">
+    <link rel="stylesheet" href="./css/styles.css?v=2">
 </head>
 
 <body>
@@ -164,6 +164,67 @@
                     ☰
                 </button>
 
+                <div class="map-tools">
+
+                    <button id="focus-project" class="map-tool-button" type="button" title="Projeye odaklan"
+                        aria-label="Haritayı proje alanına odakla">
+                        <span class="map-tool-icon">⌖</span>
+                        <span class="map-tool-label">Projeye Odaklan</span>
+                    </button>
+
+                    <div class="basemap-control">
+
+                        <button id="basemap-toggle" class="map-tool-button" type="button" aria-expanded="false"
+                            aria-controls="basemap-menu">
+                            <span class="map-tool-icon">▦</span>
+                            <span class="map-tool-label">Altlık Harita</span>
+                        </button>
+
+                        <div id="basemap-menu" class="basemap-menu" hidden>
+
+                            <span class="basemap-menu-title">
+                                Altlık Harita
+                            </span>
+
+                            <button class="basemap-option is-active" type="button" data-basemap="osm">
+                                <span class="basemap-preview basemap-preview-osm"></span>
+
+                                <span class="basemap-option-text">
+                                    <strong>Standart</strong>
+                                    <small>OpenStreetMap</small>
+                                </span>
+
+                                <span class="basemap-check">✓</span>
+                            </button>
+
+                            <button class="basemap-option" type="button" data-basemap="satellite">
+                                <span class="basemap-preview basemap-preview-satellite"></span>
+
+                                <span class="basemap-option-text">
+                                    <strong>Uydu</strong>
+                                    <small>Dünya görüntüsü</small>
+                                </span>
+
+                                <span class="basemap-check">✓</span>
+                            </button>
+
+                            <button class="basemap-option" type="button" data-basemap="light">
+                                <span class="basemap-preview basemap-preview-light"></span>
+
+                                <span class="basemap-option-text">
+                                    <strong>Açık Ton</strong>
+                                    <small>Sade harita</small>
+                                </span>
+
+                                <span class="basemap-check">✓</span>
+                            </button>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
                 <section id="map" aria-label="KIAD proje haritası"></section>
 
                 <footer class="map-statusbar">
@@ -204,10 +265,9 @@
     </div>
 
     <script src="https://unpkg.com/maplibre-gl@5.6.2/dist/maplibre-gl.js"></script>
-
-    <script src="./js/sidebar.js"></script>
-    <script src="./js/popup.js"></script>
-    <script src="./js/map.js"></script>
+    <script src="./js/sidebar.js?v=2"></script>
+    <script src="./js/popup.js?v=2"></script>
+    <script src="./js/map.js?v=2"></script>
 
 </body>
 
