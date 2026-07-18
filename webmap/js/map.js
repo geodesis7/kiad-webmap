@@ -43,6 +43,32 @@ map.addControl(
     "bottom-right"
 );
 
+const coordinateElement =
+    document.getElementById("mouse-coordinates");
+
+map.on("mousemove", (event) => {
+    if (!coordinateElement) {
+        return;
+    }
+
+    const longitude = event.lngLat.lng.toFixed(6);
+    const latitude = event.lngLat.lat.toFixed(6);
+
+    coordinateElement.textContent =
+        `${longitude}, ${latitude}`;
+});
+
+map.on("mouseout", () => {
+    if (!coordinateElement) {
+        return;
+    }
+
+    const center = map.getCenter();
+
+    coordinateElement.textContent =
+        `${center.lng.toFixed(6)}, ${center.lat.toFixed(6)}`;
+});
+
 map.on("load", () => {
 
     /*
@@ -213,58 +239,12 @@ if (assetsToggle) {
     });
 }
 
-function createPopupHtml(properties) {
 
-    const assetName =
-        properties.name ??
-        properties.asset_code ??
-        properties.asset_id ??
-        "Proje Varlığı";
-
-    const rows = Object.entries(properties)
-        .filter(([, value]) => {
-            return (
-                value !== null &&
-                value !== undefined &&
-                value !== ""
-            );
-        })
-        .slice(0, 10)
-        .map(([key, value]) => {
-            return `
-                <div class="popup-row">
-                    <span class="popup-label">
-                        ${escapeHtml(String(key))}
-                    </span>
-
-                    <span>
-                        ${escapeHtml(String(value))}
-                    </span>
-                </div>
-            `;
-        })
-        .join("");
-
-    return `
-        <div>
-            <h3 class="popup-title">
-                ${escapeHtml(String(assetName))}
-            </h3>
-
-            ${rows}
-        </div>
-    `;
-}
-
-function escapeHtml(value) {
-    return value
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#039;");
-}
 
 map.on("error", (event) => {
     console.error("MapLibre error:", event.error);
+});
+
+window.addEventListener("kiad:layout-changed", () => {
+    map.resize();
 });

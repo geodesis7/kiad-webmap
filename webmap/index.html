@@ -6,45 +6,207 @@
 
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+    <meta name="description" content="Kars–Iğdır–Aralık–Dilucu Demiryolu Projesi WebGIS uygulaması">
+
     <title>KIAD WebGIS</title>
 
     <link href="https://unpkg.com/maplibre-gl@5.6.2/dist/maplibre-gl.css" rel="stylesheet">
 
-    <link rel="stylesheet" href="./styles.css">
+    <link rel="stylesheet" href="./css/styles.css">
 </head>
 
 <body>
 
-    <header class="app-header">
-        <div>
-            <h1>KIAD WebGIS</h1>
-            <span>Kars–Iğdır–Aralık–Dilucu Demiryolu Projesi</span>
-        </div>
-    </header>
+    <div class="app-shell">
 
-    <main class="app-container">
+        <header class="app-header">
 
-        <aside class="sidebar">
+            <div class="header-brand">
 
-            <h2>Katmanlar</h2>
+                <button id="sidebar-toggle" class="header-button" type="button" aria-label="Yan paneli aç veya kapat"
+                    aria-expanded="true">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
 
-            <label class="layer-item">
-                <input id="assets-toggle" type="checkbox" checked>
-                <span>Proje Varlıkları</span>
-            </label>
+                <div class="brand-logo" aria-hidden="true">
+                    K
+                </div>
 
-            <div class="status-box">
-                <strong>Veri kaynağı</strong>
-                <span>PostGIS / pg_tileserv</span>
+                <div class="brand-text">
+                    <h1>KIAD WebGIS</h1>
+
+                    <span>
+                        Kars–Iğdır–Aralık–Dilucu Demiryolu Projesi
+                    </span>
+                </div>
+
             </div>
 
-        </aside>
+            <div class="header-actions">
 
-        <section id="map"></section>
+                <div class="system-indicator">
+                    <span class="system-indicator-dot"></span>
+                    <span>Sistem aktif</span>
+                </div>
 
-    </main>
+                <button class="user-button" type="button" aria-label="Kullanıcı menüsü">
+                    <span class="user-avatar">AG</span>
+
+                    <span class="user-info">
+                        <strong>KIAD CBS</strong>
+                        <small>Proje Yönetimi</small>
+                    </span>
+                </button>
+
+            </div>
+
+        </header>
+
+        <div class="app-main">
+
+            <aside id="sidebar" class="sidebar" aria-label="Harita kontrol paneli">
+
+                <div class="sidebar-header">
+                    <div>
+                        <span class="sidebar-eyebrow">
+                            Harita Yönetimi
+                        </span>
+
+                        <h2>Katmanlar</h2>
+                    </div>
+
+                    <button id="sidebar-close" class="sidebar-close" type="button" aria-label="Yan paneli kapat">
+                        ×
+                    </button>
+                </div>
+
+                <div class="sidebar-content">
+
+                    <section class="sidebar-section">
+
+                        <div class="section-title">
+                            <span>Proje Katmanları</span>
+                            <span class="section-count">1</span>
+                        </div>
+
+                        <label class="layer-item">
+
+                            <input id="assets-toggle" type="checkbox" checked>
+
+                            <span class="custom-checkbox"></span>
+
+                            <span class="layer-symbol layer-symbol-assets"></span>
+
+                            <span class="layer-details">
+                                <strong>Proje Varlıkları</strong>
+                                <small>Tünel, viyadük ve diğer yapılar</small>
+                            </span>
+
+                        </label>
+
+                    </section>
+
+                    <section class="sidebar-section">
+
+                        <div class="section-title">
+                            <span>Hızlı Bilgi</span>
+                        </div>
+
+                        <div class="quick-info-grid">
+
+                            <article class="quick-info-card">
+                                <span class="quick-info-label">
+                                    Veri servisi
+                                </span>
+
+                                <strong>pg_tileserv</strong>
+                            </article>
+
+                            <article class="quick-info-card">
+                                <span class="quick-info-label">
+                                    Veri kaynağı
+                                </span>
+
+                                <strong>PostGIS</strong>
+                            </article>
+
+                        </div>
+
+                    </section>
+
+                    <section class="sidebar-section sidebar-section-bottom">
+
+                        <div class="status-box">
+
+                            <div class="status-box-header">
+                                <span class="status-icon"></span>
+
+                                <strong>Bağlantı durumu</strong>
+                            </div>
+
+                            <span>
+                                Harita ve vektör servisleri çalışıyor.
+                            </span>
+
+                        </div>
+
+                    </section>
+
+                </div>
+
+            </aside>
+
+            <main class="map-area">
+
+                <button id="sidebar-open" class="map-sidebar-button" type="button" aria-label="Yan paneli aç" hidden>
+                    ☰
+                </button>
+
+                <section id="map" aria-label="KIAD proje haritası"></section>
+
+                <footer class="map-statusbar">
+
+                    <div class="statusbar-item">
+                        <span class="statusbar-label">
+                            Koordinat
+                        </span>
+
+                        <strong id="mouse-coordinates">
+                            44.009898, 40.169439
+                        </strong>
+                    </div>
+
+                    <div class="statusbar-divider"></div>
+
+                    <div class="statusbar-item statusbar-desktop">
+                        <span class="statusbar-label">
+                            Koordinat sistemi
+                        </span>
+
+                        <strong>WGS 84</strong>
+                    </div>
+
+                    <div class="statusbar-spacer"></div>
+
+                    <div class="statusbar-item">
+                        <span class="online-dot"></span>
+                        <strong>Çevrimiçi</strong>
+                    </div>
+
+                </footer>
+
+            </main>
+
+        </div>
+
+    </div>
 
     <script src="https://unpkg.com/maplibre-gl@5.6.2/dist/maplibre-gl.js"></script>
+
+    <script src="./js/sidebar.js"></script>
+    <script src="./js/popup.js"></script>
     <script src="./js/map.js"></script>
 
 </body>
