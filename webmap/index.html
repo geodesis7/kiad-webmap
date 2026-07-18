@@ -88,23 +88,118 @@
 
                         <div class="section-title">
                             <span>Proje Katmanları</span>
-                            <span class="section-count">1</span>
+                            <span class="section-count">8</span>
                         </div>
 
-                        <label class="layer-item">
+                        <div class="layer-list">
 
-                            <input id="assets-toggle" type="checkbox" checked>
+                            <label class="layer-item">
+                                <input class="asset-layer-toggle" type="checkbox" data-layer-group="alignment" checked>
 
-                            <span class="custom-checkbox"></span>
+                                <span class="custom-checkbox"></span>
 
-                            <span class="layer-symbol layer-symbol-assets"></span>
+                                <span class="layer-symbol" style="--layer-color: #ad241a;"></span>
 
-                            <span class="layer-details">
-                                <strong>Proje Varlıkları</strong>
-                                <small>Tünel, viyadük ve diğer yapılar</small>
-                            </span>
+                                <span class="layer-details">
+                                    <strong>Hat Ekseni</strong>
+                                    <small>Ana demiryolu güzergâhı</small>
+                                </span>
+                            </label>
 
-                        </label>
+                            <label class="layer-item">
+                                <input class="asset-layer-toggle" type="checkbox" data-layer-group="tunnels" checked>
+
+                                <span class="custom-checkbox"></span>
+
+                                <span class="layer-symbol" style="--layer-color: #7c3aed;"></span>
+
+                                <span class="layer-details">
+                                    <strong>Tüneller</strong>
+                                    <small>Ana hat ve bağlantı tünelleri</small>
+                                </span>
+                            </label>
+
+                            <label class="layer-item">
+                                <input class="asset-layer-toggle" type="checkbox" data-layer-group="cut-cover-tunnels"
+                                    checked>
+
+                                <span class="custom-checkbox"></span>
+
+                                <span class="layer-symbol" style="--layer-color: #d97706;"></span>
+
+                                <span class="layer-details">
+                                    <strong>Aç-Kapa Tüneller</strong>
+                                    <small>Aç-kapa yapıları</small>
+                                </span>
+                            </label>
+
+                            <label class="layer-item">
+                                <input class="asset-layer-toggle" type="checkbox" data-layer-group="viaducts" checked>
+
+                                <span class="custom-checkbox"></span>
+
+                                <span class="layer-symbol" style="--layer-color: #dc2626;"></span>
+
+                                <span class="layer-details">
+                                    <strong>Viyadükler</strong>
+                                    <small>Viyadük yapıları</small>
+                                </span>
+                            </label>
+
+                            <label class="layer-item">
+                                <input class="asset-layer-toggle" type="checkbox" data-layer-group="bridges" checked>
+
+                                <span class="custom-checkbox"></span>
+
+                                <span class="layer-symbol" style="--layer-color: #2563eb;"></span>
+
+                                <span class="layer-details">
+                                    <strong>Köprüler</strong>
+                                    <small>Köprü yapıları</small>
+                                </span>
+                            </label>
+
+                            <label class="layer-item">
+                                <input class="asset-layer-toggle" type="checkbox" data-layer-group="culverts" checked>
+
+                                <span class="custom-checkbox"></span>
+
+                                <span class="layer-symbol" style="--layer-color: #0891b2;"></span>
+
+                                <span class="layer-details">
+                                    <strong>Menfezler</strong>
+                                    <small>Menfez yapıları</small>
+                                </span>
+                            </label>
+
+                            <label class="layer-item">
+                                <input class="asset-layer-toggle" type="checkbox" data-layer-group="underpasses"
+                                    checked>
+
+                                <span class="custom-checkbox"></span>
+
+                                <span class="layer-symbol" style="--layer-color: #059669;"></span>
+
+                                <span class="layer-details">
+                                    <strong>Alt Geçitler</strong>
+                                    <small>Karayolu ve servis geçitleri</small>
+                                </span>
+                            </label>
+
+                            <label class="layer-item">
+                                <input class="asset-layer-toggle" type="checkbox" data-layer-group="overpasses" checked>
+
+                                <span class="custom-checkbox"></span>
+
+                                <span class="layer-symbol" style="--layer-color: #be123c;"></span>
+
+                                <span class="layer-details">
+                                    <strong>Üst Geçitler</strong>
+                                    <small>Üst geçit yapıları</small>
+                                </span>
+                            </label>
+
+                        </div>
 
                     </section>
 
@@ -265,9 +360,11 @@
     </div>
 
     <script src="https://unpkg.com/maplibre-gl@5.6.2/dist/maplibre-gl.js"></script>
-    <script src="./js/sidebar.js?v=2"></script>
-    <script src="./js/popup.js?v=2"></script>
-    <script src="./js/map.js?v=2"></script>
+    <script src="./js/sidebar.js"></script>
+    <script src="./js/popup.js"></script>
+    <script src="./js/layers.js"></script>
+    <script src="./js/map.js"></script>
+    <script src="./js/map-tools.js"></script>
 
 </body>
 

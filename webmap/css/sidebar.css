@@ -126,6 +126,12 @@
     font-size: 10px;
 }
 
+.layer-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
 .layer-item {
     position: relative;
 
@@ -199,10 +205,13 @@
     position: relative;
 
     border-radius: 6px;
-    background: #fff1f2;
+    background:
+        color-mix(in srgb,
+            var(--layer-color) 14%,
+            white);
 }
 
-.layer-symbol-assets::before {
+.layer-symbol::before {
     content: "";
 
     position: absolute;
@@ -212,8 +221,8 @@
 
     height: 4px;
     border-radius: 3px;
-    background: var(--color-danger);
 
+    background: var(--layer-color);
     transform: rotate(-20deg);
 }
 
