@@ -22,19 +22,27 @@ function createPopupHtml(properties = {}) {
         );
 
     const typeLabel =
-        getFirstValue(
-            properties.type_name,
-            properties.asset_type,
-            properties.type
-        );
+    getFirstValue(
+        properties.type_name,
+        properties.type_code
+    );
 
     const statusLabel =
-        getStatusLabel(properties);
+        getFirstValue(
+            properties.status_name,
+            properties.status_code
+        );
 
-    const rows = [
+    const sectionLabel =
+        getFirstValue(
+            properties.section_code,
+            properties.section_name
+        );
+
+        const rows = [
         createPopupRow(
             "Varlık Kodu",
-            assetCode
+            properties.asset_code
         ),
 
         createPopupRow(
@@ -44,10 +52,7 @@ function createPopupHtml(properties = {}) {
 
         createPopupRow(
             "Kesim",
-            formatSection(
-                properties.section_name,
-                properties.section_id
-            )
+            sectionLabel
         ),
 
         createPopupRow(
@@ -63,6 +68,11 @@ function createPopupHtml(properties = {}) {
         createPopupRow(
             "Uzunluk",
             formatLength(properties.length)
+        ),
+
+        createPopupRow(
+            "İlerleme",
+            formatProgress(properties.progress_percent)
         ),
 
         createPopupRow(
@@ -344,4 +354,16 @@ function escapeHtml(value) {
         .replaceAll(">", "&gt;")
         .replaceAll('"', "&quot;")
         .replaceAll("'", "&#039;");
+}
+
+function formatProgress(value) {
+    const numericValue = toFiniteNumber(value);
+
+    if (numericValue === null) {
+        return null;
+    }
+
+    return `%${numericValue.toLocaleString("tr-TR", {
+        maximumFractionDigits: 1
+    })}`;
 }

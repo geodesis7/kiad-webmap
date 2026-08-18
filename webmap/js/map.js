@@ -216,7 +216,7 @@ map.on("load", () => {
     map.addSource("assets-source", {
         type: "vector",
         tiles: [
-            "https://kiad.tr/tiles/public.assets/{z}/{x}/{y}.pbf"
+            "https://kiad.tr/tiles/public.web_assets/{z}/{x}/{y}.pbf"
         ],
         minzoom: 0,
         maxzoom: 22,
@@ -230,7 +230,7 @@ map.on("load", () => {
 
 
     });
-
+/*
     const assetLayerToggles =
         document.querySelectorAll(
             ".asset-layer-toggle"
@@ -252,7 +252,7 @@ map.on("load", () => {
             );
         });
     });
-
+*/
     addAssetLayers(map);
 
     /*

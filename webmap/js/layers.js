@@ -1,7 +1,7 @@
 "use strict";
 
 const ASSET_SOURCE_ID = "assets-source";
-const ASSET_SOURCE_LAYER = "public.assets";
+const ASSET_SOURCE_LAYER = "public.web_assets";
 
 const ASSET_LAYER_GROUPS = [
 
@@ -182,4 +182,112 @@ function getInteractiveAssetLayerIds() {
     return ASSET_LAYER_GROUPS.flatMap((group) => {
         return getAssetLayerIds(group.id);
     });
+}
+
+function getAssetGroup(groupId) {
+    return ASSET_LAYER_GROUPS.find(
+        (group) => group.id === groupId
+    );
+}
+
+
+function buildAssetFilter(
+    group,
+    geometryType,
+    selectedAssetIds = null
+) {
+    const filters = [
+        ["==", ["geometry-type"], geometryType],
+        ["==", ["get", "type_id"], group.typeId]
+    ];
+
+    /*
+     * selectedAssetIds null ise:
+     * grubun bütün assetleri gösterilir.
+     *
+     * Bir array verilmişse:
+     * yalnızca seçili asset_id değerleri gösterilir.
+     */
+    if (Array.isArray(selectedAssetIds)) {
+        filters.push([
+            "in",
+            ["get", "asset_id"],
+            ["literal", selectedAssetIds]
+        ]);
+    }
+
+    return [
+        "all",
+        ...filters
+    ];
+}
+
+
+function setAssetGroupSelection(
+    map,
+    groupId,
+    selectedAssetIds
+) {
+    const group = getAssetGroup(groupId);
+
+    if (!group) {
+        console.warn(
+            "Katman grubu bulunamadı:",
+            groupId
+        );
+
+        return;
+    }
+
+    const layerDefinitions = [
+        {
+            layerId: `${group.id}-polygons`,
+            geometryType: "Polygon"
+        },
+        {
+            layerId: `${group.id}-lines`,
+            geometryType: "LineString"
+        },
+        {
+            layerId: `${group.id}-points`,
+            geometryType: "Point"
+        }
+    ];
+
+    /*
+     * Hiç asset seçili değilse katmanları gizlemek,
+     * boş bir filter expression oluşturmaktan daha temiz.
+     */
+    const hasSelection =
+        selectedAssetIds.length > 0;
+
+    layerDefinitions.forEach(
+        ({ layerId, geometryType }) => {
+
+            if (!map.getLayer(layerId)) {
+                return;
+            }
+
+            map.setLayoutProperty(
+                layerId,
+                "visibility",
+                hasSelection
+                    ? "visible"
+                    : "none"
+            );
+
+            if (!hasSelection) {
+                return;
+            }
+
+            map.setFilter(
+                layerId,
+                buildAssetFilter(
+                    group,
+                    geometryType,
+                    selectedAssetIds
+                )
+            );
+        }
+    );
 }

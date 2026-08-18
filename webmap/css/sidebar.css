@@ -6,17 +6,15 @@
     min-width: var(--sidebar-width);
     height: 100%;
 
+    min-height: 0;
+
     display: flex;
     flex-direction: column;
 
+    overflow: hidden;
+
     background: var(--color-surface);
     border-right: 1px solid var(--color-border);
-    box-shadow: 4px 0 18px rgba(16, 36, 62, 0.05);
-
-    transition:
-        width var(--transition-normal),
-        min-width var(--transition-normal),
-        transform var(--transition-normal);
 }
 
 .sidebar.is-closed {
@@ -79,14 +77,22 @@
 }
 
 .sidebar-content {
-    min-height: 0;
-    flex: 1;
+    flex: 1 1 auto;
 
-    display: flex;
-    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+
+    display: block;
 
     padding: 18px;
+
+    overflow-x: hidden;
     overflow-y: auto;
+
+    overscroll-behavior: contain;
+    overflow-anchor: none;
+
+    scrollbar-gutter: stable;
 }
 
 .sidebar-section+.sidebar-section {
@@ -94,8 +100,8 @@
 }
 
 .sidebar-section-bottom {
-    margin-top: auto !important;
-    padding-top: 24px;
+    margin-top: 24px !important;
+    padding-top: 0;
 }
 
 .section-title {
@@ -333,4 +339,340 @@
         width: min(310px, calc(100vw - 48px));
         min-width: min(310px, calc(100vw - 48px));
     }
+}
+
+.layer-tree {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+
+.layer-tree-loading,
+.layer-tree-error,
+.layer-tree-empty {
+    padding: 14px;
+
+    border: 1px solid var(--color-border);
+    border-radius: 9px;
+
+    color: var(--color-text-muted);
+    background: var(--color-surface-soft);
+
+    font-size: 11px;
+    line-height: 1.5;
+}
+
+
+.layer-tree-error {
+    color: #991b1b;
+    background: #fef2f2;
+    border-color: #fecaca;
+}
+
+
+.layer-group {
+    overflow: hidden;
+
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+
+    background: var(--color-surface);
+}
+
+
+.layer-group-header {
+    min-height: 46px;
+
+    display: flex;
+    align-items: center;
+
+    padding: 5px 8px;
+}
+
+
+.layer-group:hover {
+    border-color: #bdc9d5;
+}
+
+
+.layer-group-expand {
+    width: 27px;
+    height: 32px;
+
+    display: grid;
+    place-items: center;
+
+    padding: 0;
+    border: 0;
+
+    color: var(--color-text-muted);
+    background: transparent;
+
+    cursor: pointer;
+}
+
+
+.layer-group-chevron {
+    display: block;
+
+    font-size: 21px;
+    line-height: 1;
+
+    transform: rotate(0deg);
+
+    transition:
+        transform var(--transition-fast);
+}
+
+
+.layer-group.is-open
+.layer-group-chevron {
+    transform: rotate(90deg);
+}
+
+
+.layer-group-checkbox,
+.layer-asset-checkbox {
+    position: relative;
+
+    width: 18px;
+    height: 18px;
+
+    flex: 0 0 18px;
+
+    display: grid;
+    place-items: center;
+
+    cursor: pointer;
+}
+
+
+.layer-group-checkbox input,
+.layer-asset-checkbox input {
+    position: absolute;
+
+    width: 18px;
+    height: 18px;
+
+    margin: 0;
+
+    opacity: 0;
+
+    cursor: pointer;
+}
+
+
+.layer-group-checkbox
+.custom-checkbox,
+.layer-asset-checkbox
+.custom-checkbox {
+    width: 17px;
+    height: 17px;
+
+    display: grid;
+    place-items: center;
+
+    border: 1.5px solid #a9b6c4;
+    border-radius: 5px;
+
+    background: #ffffff;
+}
+
+
+.layer-group-checkbox
+input:checked
++ .custom-checkbox,
+.layer-asset-checkbox
+input:checked
++ .custom-checkbox {
+    border-color:
+        var(--color-primary-800);
+
+    background:
+        var(--color-primary-800);
+}
+
+
+.layer-group-checkbox
+input:checked
++ .custom-checkbox::after,
+.layer-asset-checkbox
+input:checked
++ .custom-checkbox::after {
+    content: "";
+
+    width: 7px;
+    height: 4px;
+
+    border-bottom: 2px solid #ffffff;
+    border-left: 2px solid #ffffff;
+
+    transform:
+        translateY(-1px)
+        rotate(-45deg);
+}
+
+
+/*
+ * Parent checkbox indeterminate durumu.
+ */
+.layer-group-checkbox
+input:indeterminate
++ .custom-checkbox {
+    border-color:
+        var(--color-primary-800);
+
+    background:
+        var(--color-primary-800);
+}
+
+
+.layer-group-checkbox
+input:indeterminate
++ .custom-checkbox::after {
+    content: "";
+
+    width: 8px;
+    height: 2px;
+
+    border-radius: 2px;
+    background: #ffffff;
+}
+
+
+.layer-group-title {
+    min-width: 0;
+    flex: 1;
+
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    padding: 5px 0;
+
+    border: 0;
+    background: transparent;
+
+    text-align: left;
+    cursor: pointer;
+}
+
+
+.layer-group-name {
+    overflow: hidden;
+
+    color: var(--color-text);
+
+    font-size: 12px;
+    font-weight: 700;
+
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+
+.layer-group-count {
+    min-width: 25px;
+    height: 21px;
+
+    display: grid;
+    place-items: center;
+
+    margin-left: 5px;
+
+    border-radius: 999px;
+
+    color: var(--color-primary-800);
+    background: #e8eff6;
+
+    font-size: 9px;
+    font-weight: 700;
+}
+
+
+.layer-group-assets {
+    width: 100%;
+    min-width: 0;
+
+    padding: 4px 8px 8px 42px;
+
+    border-top: 1px solid var(--color-border);
+
+    background: var(--color-surface-soft);
+}
+
+
+.layer-asset {
+    width: 100%;
+    min-width: 0;
+    min-height: 38px;
+
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    padding: 4px 5px;
+
+    border-radius: 7px;
+}
+
+.layer-asset:hover {
+    background: #ffffff;
+}
+
+
+.layer-asset-checkbox {
+    display: grid;
+    place-items: center;
+
+    cursor: pointer;
+}
+
+
+.layer-asset-name {
+    min-width: 0;
+    flex: 1;
+
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+
+    padding: 4px;
+
+    border: 0;
+    background: transparent;
+
+    text-align: left;
+    cursor: pointer;
+}
+
+
+.layer-asset-primary {
+    max-width: 100%;
+
+    overflow: hidden;
+
+    color: var(--color-text);
+
+    font-size: 11px;
+    font-weight: 600;
+
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+
+.layer-asset-secondary {
+    max-width: 100%;
+
+    overflow: hidden;
+
+    color: var(--color-text-muted);
+
+    font-size: 9px;
+
+    white-space: nowrap;
+    text-overflow: ellipsis;
 }
