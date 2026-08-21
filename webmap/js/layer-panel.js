@@ -141,6 +141,14 @@ function createLayerGroupHtml(group) {
             })
             .join("");
 
+    const style =
+        typeof getAssetStyle === "function"
+            ? getAssetStyle(group.id)
+            : null;
+
+    const layerColor =
+        style?.color ?? "#64748b";
+
 
     return `
         <section
@@ -183,7 +191,7 @@ function createLayerGroupHtml(group) {
                         class="layer-symbol"
                         style="
                             --layer-color:
-                            ${escapeAttribute(group.color)};
+                            ${escapeAttribute(layerColor)};
                         "
                     ></span>
 
@@ -223,8 +231,8 @@ function createAssetRowHtml(group, asset) {
 
     const secondaryLabel =
         asset.asset_code &&
-        asset.name &&
-        asset.asset_code !== asset.name
+            asset.name &&
+            asset.asset_code !== asset.name
             ? asset.name
             : "";
 
@@ -259,15 +267,14 @@ function createAssetRowHtml(group, asset) {
                     ${escapeHtml(primaryLabel)}
                 </span>
 
-                ${
-                    secondaryLabel
-                        ? `
+                ${secondaryLabel
+            ? `
                             <span class="layer-asset-secondary">
                                 ${escapeHtml(secondaryLabel)}
                             </span>
                         `
-                        : ""
-                }
+            : ""
+        }
 
             </button>
 
@@ -320,13 +327,13 @@ function bindLayerTreeEvents(groups) {
                     ".layer-asset-toggle"
                 )
             );
-        
-            const assetNameButtons =
-                Array.from(
-                    groupElement.querySelectorAll(
-                        ".layer-asset-name"
-                    )
-                );
+
+        const assetNameButtons =
+            Array.from(
+                groupElement.querySelectorAll(
+                    ".layer-asset-name"
+                )
+            );
 
 
         /*

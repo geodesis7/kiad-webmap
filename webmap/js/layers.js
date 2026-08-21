@@ -9,165 +9,257 @@ const ASSET_LAYER_GROUPS = [
     {
         id: "alignment",
         label: "Hat Ekseni",
-        typeId: 1,
-        color: "#ad1414c5"
+        typeId: 1
     },
 
     {
         id: "tunnels",
         label: "Tüneller",
-        typeId: 3,
-        color: "#7c3aed"
+        typeId: 3
     },
     {
         id: "cut-cover-tunnels",
         label: "Aç-Kapa Tüneller",
-        typeId: 4,
-        color: "#d97706"
+        typeId: 4
     },
     {
         id: "viaducts",
         label: "Viyadükler",
-        typeId: 5,
-        color: "#dc2626"
+        typeId: 5
     },
     {
         id: "bridges",
         label: "Köprüler",
-        typeId: 6,
-        color: "#2563eb"
+        typeId: 6
     },
     {
         id: "culverts",
         label: "Menfezler",
-        typeId: 7,
-        color: "#0891b2"
+        typeId: 7
     },
     {
         id: "underpasses",
         label: "Alt Geçitler",
-        typeId: 8,
-        color: "#059669"
+        typeId: 8
     },
     {
         id: "overpasses",
         label: "Üst Geçitler",
-        typeId: 9,
-        color: "#be123c"
+        typeId: 9
     },
-    
+
     {
         id: "stations",
         label: "İstasyonlar",
-        typeId: 2,
-        color: "#facc15"
+        typeId: 2
     }
 ];
+
+function getAssetStyle(groupId) {
+    const style = ASSET_STYLES[groupId];
+
+    if (!style) {
+        console.warn(
+            "Katman stili bulunamadı:",
+            groupId
+        );
+
+        return ASSET_STYLES.default;
+    }
+
+    return style;
+}
 
 function addAssetLayers(map) {
     ASSET_LAYER_GROUPS.forEach((group) => {
         addAssetPolygonLayer(map, group);
         addAssetLineLayer(map, group);
         addAssetPointLayer(map, group);
+        addAssetLabelLayer(map, group);
     });
 }
 
 function addAssetPolygonLayer(map, group) {
+    const style = getAssetStyle(group.id);
+
     map.addLayer({
         id: `${group.id}-polygons`,
         type: "fill",
+
         source: ASSET_SOURCE_ID,
         "source-layer": ASSET_SOURCE_LAYER,
 
-        filter: [
-            "all",
-            ["==", ["geometry-type"], "Polygon"],
-            ["==", ["get", "type_id"], group.typeId]
-        ],
+        filter: buildAssetFilter(
+            group,
+            "Polygon"
+        ),
 
         layout: {
             visibility: "visible"
         },
 
         paint: {
-            "fill-color": group.color,
-            "fill-opacity": 0.42,
-            "fill-outline-color": group.color
+            "fill-color": style.color,
+
+            "fill-opacity":
+                style.fill?.opacity ?? 0.35,
+
+            "fill-outline-color":
+                style.fill?.outlineColor ??
+                style.color
         }
     });
 }
 
 function addAssetLineLayer(map, group) {
+    const style = getAssetStyle(group.id);
+
     map.addLayer({
         id: `${group.id}-lines`,
         type: "line",
+
         source: ASSET_SOURCE_ID,
         "source-layer": ASSET_SOURCE_LAYER,
 
-        filter: [
-            "all",
-            ["==", ["geometry-type"], "LineString"],
-            ["==", ["get", "type_id"], group.typeId]
-        ],
+        filter: buildAssetFilter(
+            group,
+            "LineString"
+        ),
 
         layout: {
             visibility: "visible",
-            "line-cap": "round",
-            "line-join": "round"
+
+            "line-cap":
+                style.line?.cap ?? "round",
+
+            "line-join":
+                style.line?.join ?? "round"
         },
 
         paint: {
-            "line-color": group.color,
-            "line-width": [
-                "interpolate",
-                ["linear"],
-                ["zoom"],
-                7, 2,
-                12, 5,
-                16, 8
-            ]
+            "line-color": style.color,
+
+            "line-width":
+                style.line?.width ?? 3,
+
+            "line-opacity":
+                style.line?.opacity ?? 1
         }
     });
 }
 
 function addAssetPointLayer(map, group) {
+    const style = getAssetStyle(group.id);
+
     map.addLayer({
         id: `${group.id}-points`,
         type: "circle",
+
         source: ASSET_SOURCE_ID,
         "source-layer": ASSET_SOURCE_LAYER,
 
-        filter: [
-            "all",
-            ["==", ["geometry-type"], "Point"],
-            ["==", ["get", "type_id"], group.typeId]
-        ],
+        filter: buildAssetFilter(
+            group,
+            "Point"
+        ),
 
         layout: {
             visibility: "visible"
         },
 
         paint: {
-            "circle-radius": [
-                "interpolate",
-                ["linear"],
-                ["zoom"],
-                7, 4,
-                12, 7,
-                16, 10
+            "circle-radius":
+                style.point?.radius ?? 6,
+
+            "circle-color":
+                style.point?.color ??
+                style.color,
+
+            "circle-opacity":
+                style.point?.opacity ?? 1,
+
+            "circle-stroke-color":
+                style.point?.strokeColor ??
+                "#ffffff",
+
+            "circle-stroke-width":
+                style.point?.strokeWidth ?? 2
+        }
+    });
+
+
+}
+
+function addAssetLabelLayer(map, group) {
+    const style = getAssetStyle(group.id);
+    const label = style.label;
+
+    if (!label) {
+        return;
+    }
+
+    map.addLayer({
+        id: `${group.id}-labels`,
+        type: "symbol",
+
+        source: ASSET_SOURCE_ID,
+        "source-layer": ASSET_SOURCE_LAYER,
+
+        filter: buildAssetFilter(
+            group,
+            label.geometryType ?? "Polygon"
+        ),
+
+        minzoom:
+            label.minZoom ?? 0,
+
+        layout: {
+            visibility: "visible",
+
+            "text-field": [
+                "get",
+                label.field ?? "name"
             ],
-            "circle-color": group.color,
-            "circle-stroke-color": "#ffffff",
-            "circle-stroke-width": 2
+
+            "text-size":
+                label.size ?? 14,
+
+            "text-offset":
+                label.offset ?? [0, 0],
+
+            "text-anchor":
+                label.anchor ?? "center",
+
+            "text-allow-overlap":
+                label.allowOverlap ?? false,
+
+            "text-ignore-placement":
+                label.ignorePlacement ?? false
+        },
+
+        paint: {
+            "text-color":
+                label.color ?? style.color,
+
+            "text-opacity":
+                label.opacity ?? 1,
+
+            "text-halo-color":
+                label.haloColor ?? "#ffffff",
+
+            "text-halo-width":
+                label.haloWidth ?? 1
         }
     });
 }
+
 
 function getAssetLayerIds(groupId) {
     return [
         `${groupId}-polygons`,
         `${groupId}-lines`,
-        `${groupId}-points`
+        `${groupId}-points`,
+        `${groupId}-labels`
     ];
 }
 
@@ -246,6 +338,8 @@ function setAssetGroupSelection(
         return;
     }
 
+    const style = getAssetStyle(group.id);
+
     const layerDefinitions = [
         {
             layerId: `${group.id}-polygons`,
@@ -260,6 +354,14 @@ function setAssetGroupSelection(
             geometryType: "Point"
         }
     ];
+
+    if (style.label) {
+        layerDefinitions.push({
+            layerId: `${group.id}-labels`,
+            geometryType:
+                style.label.geometryType ?? "Point"
+        });
+    }
 
     /*
      * Hiç asset seçili değilse katmanları gizlemek,

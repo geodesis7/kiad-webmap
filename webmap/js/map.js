@@ -18,6 +18,10 @@ const map = new maplibregl.Map({
     style: {
         version: 8,
 
+        glyphs:
+            "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
+
+
         sources: {
             "basemap-osm-source": {
                 type: "raster",
