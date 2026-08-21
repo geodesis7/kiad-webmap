@@ -8,6 +8,7 @@ const PROJECT_BOUNDS = [
 const BASEMAP_LAYER_IDS = [
     "basemap-osm",
     "basemap-satellite",
+    "basemap-terrain",
     "basemap-light"
 ];
 
@@ -30,11 +31,23 @@ const map = new maplibregl.Map({
             "basemap-satellite-source": {
                 type: "raster",
                 tiles: [
-                    "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+                    "https://mt0.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}"
                 ],
                 tileSize: 256,
                 attribution:
-                    "Tiles &copy; Esri — Source: Esri, Maxar, Earthstar Geographics and contributors"
+                    "Tiles &copy; Google, Map data &copy"
+
+            },
+
+            "basemap-terrain-source": {
+                type: "raster",
+                tiles: [
+                    "https://mt0.google.com/vt/lyrs=p&hl=en&x={x}&y={y}&z={z}"
+                ],
+                tileSize: 256,
+                attribution:
+                    "Tiles &copy; Google, Map data &copy"
+
             },
 
             "basemap-light-source": {
@@ -64,6 +77,15 @@ const map = new maplibregl.Map({
                 id: "basemap-satellite",
                 type: "raster",
                 source: "basemap-satellite-source",
+                layout: {
+                    visibility: "none"
+                }
+            },
+
+            {
+                id: "basemap-terrain",
+                type: "raster",
+                source: "basemap-terrain-source",
                 layout: {
                     visibility: "none"
                 }
@@ -230,29 +252,29 @@ map.on("load", () => {
 
 
     });
-/*
-    const assetLayerToggles =
-        document.querySelectorAll(
-            ".asset-layer-toggle"
-        );
-
-    assetLayerToggles.forEach((toggle) => {
-        toggle.addEventListener("change", () => {
-            const groupId =
-                toggle.dataset.layerGroup;
-
-            if (!groupId) {
-                return;
-            }
-
-            setAssetLayerVisibility(
-                map,
-                groupId,
-                toggle.checked
+    /*
+        const assetLayerToggles =
+            document.querySelectorAll(
+                ".asset-layer-toggle"
             );
+    
+        assetLayerToggles.forEach((toggle) => {
+            toggle.addEventListener("change", () => {
+                const groupId =
+                    toggle.dataset.layerGroup;
+    
+                if (!groupId) {
+                    return;
+                }
+    
+                setAssetLayerVisibility(
+                    map,
+                    groupId,
+                    toggle.checked
+                );
+            });
         });
-    });
-*/
+    */
     addAssetLayers(map);
 
     /*

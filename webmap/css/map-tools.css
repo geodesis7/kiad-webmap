@@ -151,6 +151,16 @@
             #17252d);
 }
 
+.basemap-preview-terrain {
+    background:
+        linear-gradient(135deg,
+            #dfe8b6 0%,
+            #b4bd7c 30%,
+            #c7b17b 33%,
+            #7d8d63 60%,
+            #53634d 100%);
+}
+
 .basemap-preview-light {
     background:
         linear-gradient(135deg,

@@ -86,34 +86,22 @@
 
                     <section class="sidebar-section">
 
+
                         <div class="section-title">
                             <span>Proje Katmanları</span>
-                            <span class="section-count">8</span>
+
+                            <span id="layer-group-count" class="section-count">
+                                0
+                            </span>
                         </div>
 
-                        <section class="sidebar-section">
-
-                            <div class="section-title">
-                                <span>Proje Katmanları</span>
-
-                                <span
-                                    id="layer-group-count"
-                                    class="section-count"
-                                >
-                                    0
-                                </span>
+                        <div id="layer-tree" class="layer-tree">
+                            <div class="layer-tree-loading">
+                                Katmanlar yükleniyor...
                             </div>
+                        </div>
 
-                            <div
-                                id="layer-tree"
-                                class="layer-tree"
-                            >
-                                <div class="layer-tree-loading">
-                                    Katmanlar yükleniyor...
-                                </div>
-                            </div>
-
-                        </section>
+                    </section>
 
                     </section>
 
@@ -210,7 +198,18 @@
                                 <span class="basemap-preview basemap-preview-satellite"></span>
 
                                 <span class="basemap-option-text">
-                                    <strong>Uydu</strong>
+                                    <strong>Google Uydu</strong>
+                                    <small>Dünya görüntüsü</small>
+                                </span>
+
+                                <span class="basemap-check">✓</span>
+                            </button>
+
+                            <button class="basemap-option" type="button" data-basemap="terrain">
+                                <span class="basemap-preview basemap-preview-terrain"></span>
+
+                                <span class="basemap-option-text">
+                                    <strong>Google Arazi</strong>
                                     <small>Dünya görüntüsü</small>
                                 </span>
 

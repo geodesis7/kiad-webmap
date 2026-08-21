@@ -54,6 +54,13 @@ const ASSET_LAYER_GROUPS = [
         label: "Üst Geçitler",
         typeId: 9,
         color: "#be123c"
+    },
+    
+    {
+        id: "stations",
+        label: "İstasyonlar",
+        typeId: 2,
+        color: "#facc15"
     }
 ];
 
