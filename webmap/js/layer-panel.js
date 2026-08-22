@@ -84,7 +84,11 @@ function renderLayerTree(assets) {
                         Number(group.typeId)
                     );
                 })
-                .sort(compareAssets);
+                .sort(
+                    group.id === "tunnels"
+                        ? compareTunnelAssets
+                        : compareAssets
+                );
 
             return {
                 ...group,
@@ -443,7 +447,7 @@ function bindLayerTreeEvents(groups) {
                         return;
                     }
 
-                    focusAsset(asset);
+                    focusAssetAndOpenPopup(asset);
                 }
             );
         });
@@ -507,6 +511,16 @@ function updateMapGroupSelection(
             selectedAssetIds
         );
     }
+
+    window.dispatchEvent(new CustomEvent(
+        "kiad:asset-group-selection-changed",
+        {
+            detail: {
+                groupId,
+                selectedAssetIds
+            }
+        }
+    ));
 }
 
 
@@ -562,6 +576,102 @@ function escapeAttribute(value) {
  */
 loadLayerPanel();
 
+
+let pendingAssetPopup = null;
+
+
+function focusAssetAndOpenPopup(asset) {
+    const popupLngLat = getAssetPopupLngLat(asset);
+
+    clearPendingAssetPopup();
+
+    if (!popupLngLat) {
+        focusAsset(asset);
+        return;
+    }
+
+    let hasOpened = false;
+
+    const openPopup = () => {
+        if (hasOpened) {
+            return;
+        }
+
+        hasOpened = true;
+        clearPendingAssetPopup();
+        openAssetPopup(map, asset, popupLngLat);
+    };
+
+    const moveEndHandler = () => {
+        openPopup();
+    };
+
+    pendingAssetPopup = {
+        handler: moveEndHandler,
+        timerId: null
+    };
+
+    map.once("moveend", moveEndHandler);
+
+    const hasFocused = focusAsset(asset);
+
+    if (!hasFocused) {
+        openPopup();
+        return;
+    }
+
+    if (pendingAssetPopup?.handler === moveEndHandler) {
+        pendingAssetPopup.timerId = window.setTimeout(
+            openPopup,
+            1200
+        );
+    }
+}
+
+
+function clearPendingAssetPopup() {
+    if (!pendingAssetPopup) {
+        return;
+    }
+
+    map.off("moveend", pendingAssetPopup.handler);
+
+    if (pendingAssetPopup.timerId !== null) {
+        window.clearTimeout(pendingAssetPopup.timerId);
+    }
+
+    pendingAssetPopup = null;
+}
+
+
+function getAssetPopupLngLat(asset) {
+    const longitude = Number(asset.center_lon);
+    const latitude = Number(asset.center_lat);
+
+    if (
+        Number.isFinite(longitude) &&
+        Number.isFinite(latitude)
+    ) {
+        return [longitude, latitude];
+    }
+
+    const bbox = Array.isArray(asset.bbox)
+        ? asset.bbox.map(Number)
+        : null;
+
+    if (
+        bbox?.length === 4 &&
+        bbox.every(Number.isFinite)
+    ) {
+        return [
+            (bbox[0] + bbox[2]) / 2,
+            (bbox[1] + bbox[3]) / 2
+        ];
+    }
+
+    return null;
+}
+
 function focusAsset(asset) {
 
     const bbox =
@@ -615,7 +725,7 @@ function focusAsset(asset) {
                 }
             );
 
-            return;
+            return true;
         }
     }
 
@@ -645,7 +755,7 @@ function focusAsset(asset) {
             duration: 900
         });
 
-        return;
+        return true;
     }
 
 
@@ -653,4 +763,46 @@ function focusAsset(asset) {
         "Asset için konum bilgisi bulunamadı:",
         asset.asset_id
     );
+
+    return false;
+}
+
+
+/*
+ * Yalnızca tunnels grubu için ana tünel ailelerini
+ * istenen sıraya yerleştirir.
+ */
+function compareTunnelAssets(a, b) {
+    const codeA = String(a.asset_code ?? "");
+    const codeB = String(b.asset_code ?? "");
+    const priorityDifference =
+        getTunnelSortPriority(codeA) -
+        getTunnelSortPriority(codeB);
+
+    return priorityDifference || compareAssets(a, b);
+}
+
+
+function getTunnelSortPriority(assetCode) {
+    const normalizedCode = String(assetCode)
+        .trim()
+        .toLocaleLowerCase("tr");
+
+    if (/^t\d+$/.test(normalizedCode)) {
+        return 0;
+    }
+
+    if (/^emt\d+$/.test(normalizedCode)) {
+        return 1;
+    }
+
+    if (/^kt\d+$/.test(normalizedCode)) {
+        return 2;
+    }
+
+    if (/^cp\d+$/.test(normalizedCode)) {
+        return 3;
+    }
+
+    return 4;
 }

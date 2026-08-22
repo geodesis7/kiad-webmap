@@ -1,5 +1,138 @@
 "use strict";
 
+let activeAssetPopup = null;
+
+/**
+ * Harita ve katman listesinin paylaştığı tek popup açma noktasıdır.
+ *
+ * @param {maplibregl.Map} mapInstance
+ * @param {Record<string, unknown>} properties
+ * @param {maplibregl.LngLatLike} lngLat
+ * @returns {maplibregl.Popup}
+ */
+function openAssetPopup(mapInstance, properties, lngLat) {
+    if (typeof clearPendingAssetPopup === "function") {
+        clearPendingAssetPopup();
+    }
+
+    activeAssetPopup?.remove();
+
+    const popup = new maplibregl.Popup({
+        closeButton: true,
+        closeOnClick: true,
+        maxWidth: "360px",
+        offset: 12
+    })
+        .setLngLat(lngLat)
+        .setHTML(createPopupHtml(properties))
+        .addTo(mapInstance);
+
+    activeAssetPopup = popup;
+    bindPopupActions(popup, properties);
+
+    popup.on("close", () => {
+        if (activeAssetPopup === popup) {
+            activeAssetPopup = null;
+        }
+    });
+
+    window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => {
+            ensurePopupVisible(mapInstance, popup);
+        });
+    });
+
+    return popup;
+}
+
+/**
+ * Popup taşan kenarlar kadar haritayı kaydırarak tüm içeriği görünür tutar.
+ *
+ * @param {maplibregl.Map} mapInstance
+ * @param {maplibregl.Popup} popup
+ */
+function ensurePopupVisible(mapInstance, popup) {
+    const popupElement = popup.getElement();
+    const mapElement = mapInstance.getContainer();
+
+    if (!popupElement || !mapElement) {
+        return;
+    }
+
+    const popupRect = popupElement.getBoundingClientRect();
+    const mapRect = mapElement.getBoundingClientRect();
+    const safeGap = 12;
+    const visibleBounds = {
+        top: mapRect.top + safeGap,
+        right: mapRect.right - safeGap,
+        bottom: mapRect.bottom - safeGap,
+        left: mapRect.left + safeGap
+    };
+
+    const sidebar = document.getElementById("sidebar");
+
+    if (sidebar && !sidebar.classList.contains("is-closed")) {
+        const sidebarRect = sidebar.getBoundingClientRect();
+
+        if (sidebarRect.right > mapRect.left) {
+            visibleBounds.left = Math.max(
+                visibleBounds.left,
+                sidebarRect.right + safeGap
+            );
+        }
+    }
+
+    const drawer = document.getElementById("tunnel-detail-drawer");
+
+    if (
+        drawer &&
+        !drawer.hidden &&
+        drawer.classList.contains("is-open")
+    ) {
+        const drawerRect = drawer.getBoundingClientRect();
+
+        visibleBounds.right = Math.min(
+            visibleBounds.right,
+            drawerRect.left - safeGap
+        );
+    }
+
+    if (
+        visibleBounds.right <= visibleBounds.left ||
+        visibleBounds.bottom <= visibleBounds.top
+    ) {
+        return;
+    }
+
+    const leftOverflow = Math.max(
+        visibleBounds.left - popupRect.left,
+        0
+    );
+    const rightOverflow = Math.max(
+        popupRect.right - visibleBounds.right,
+        0
+    );
+    const topOverflow = Math.max(
+        visibleBounds.top - popupRect.top,
+        0
+    );
+    const bottomOverflow = Math.max(
+        popupRect.bottom - visibleBounds.bottom,
+        0
+    );
+    const panX = rightOverflow - leftOverflow;
+    const panY = bottomOverflow - topOverflow;
+
+    if (panX === 0 && panY === 0) {
+        return;
+    }
+
+    mapInstance.panBy([panX, panY], {
+        duration: 280,
+        essential: true
+    });
+}
+
 /**
  * Varlık bilgilerini kullanıcı dostu popup HTML'ine dönüştürür.
  *
@@ -22,10 +155,10 @@ function createPopupHtml(properties = {}) {
         );
 
     const typeLabel =
-    getFirstValue(
-        properties.type_name,
-        properties.type_code
-    );
+        getFirstValue(
+            properties.type_name,
+            properties.type_code
+        );
 
     const statusLabel =
         getFirstValue(
@@ -39,7 +172,10 @@ function createPopupHtml(properties = {}) {
             properties.section_name
         );
 
-        const rows = [
+    const tunnelDetailAction =
+        createTunnelDetailAction(properties);
+
+    const rows = [
         createPopupRow(
             "Varlık Kodu",
             properties.asset_code
@@ -115,8 +251,79 @@ function createPopupHtml(properties = {}) {
                 ${rows || createEmptyPopupMessage()}
             </div>
 
+            ${tunnelDetailAction}
+
         </article>
     `;
+}
+
+/**
+ * Yalnızca tünel varlıkları için detay aksiyonu oluşturur.
+ *
+ * @param {Record<string, unknown>} properties
+ * @returns {string}
+ */
+function createTunnelDetailAction(properties = {}) {
+    const typeId = toFiniteNumber(properties.type_id);
+    const assetId = toFiniteNumber(properties.asset_id);
+
+    if (typeId !== 3 || assetId === null) {
+        return "";
+    }
+
+    return `
+        <footer class="asset-popup-actions">
+            <button
+                class="tunnel-detail-button"
+                type="button"
+                data-popup-action="open-tunnel-detail"
+            >
+                Tünel Detayını Aç
+            </button>
+        </footer>
+    `;
+}
+
+/**
+ * Popup içindeki aksiyonları ilgili varlığa bağlar.
+ *
+ * @param {maplibregl.Popup} popup
+ * @param {Record<string, unknown>} properties
+ */
+function bindPopupActions(popup, properties = {}) {
+    const button = popup
+        .getElement()
+        ?.querySelector('[data-popup-action="open-tunnel-detail"]');
+
+    if (!button) {
+        return;
+    }
+
+    button.addEventListener("click", () => {
+        openTunnelDetailDrawer(properties.asset_id);
+    });
+}
+
+/**
+ * Gelecekte eklenecek drawer bileşenine tünel kimliğini iletir.
+ * Drawer bu olayı dinleyerek görünür hâle gelebilir ve verisini yükleyebilir.
+ *
+ * @param {unknown} assetId
+ */
+function openTunnelDetailDrawer(assetId) {
+    const normalizedAssetId = toFiniteNumber(assetId);
+
+    if (normalizedAssetId === null) {
+        return;
+    }
+
+    window.dispatchEvent(
+        new CustomEvent("kiad:tunnel-detail-open", {
+            detail: {
+                assetId: normalizedAssetId
+            }
+        })
+    );
 }
 
 /**

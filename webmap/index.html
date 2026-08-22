@@ -46,6 +46,12 @@
 
             <div class="header-actions">
 
+                <button id="dashboard-toggle" class="header-dashboard-button" type="button"
+                    aria-controls="tunnel-dashboard" aria-expanded="false">
+                    <span aria-hidden="true">▦</span>
+                    <span>Dashboard</span>
+                </button>
+
                 <div class="system-indicator">
                     <span class="system-indicator-dot"></span>
                     <span>Sistem aktif</span>
@@ -235,6 +241,16 @@
 
                 <section id="map" aria-label="KIAD proje haritası"></section>
 
+                <section id="tunnel-dashboard" class="dashboard-panel" aria-labelledby="dashboard-title"
+                    aria-hidden="true" hidden>
+                    <div id="dashboard-content" class="dashboard-content" aria-live="polite"></div>
+                </section>
+
+                <aside id="tunnel-detail-drawer" class="tunnel-detail-drawer" aria-labelledby="tunnel-detail-title"
+                    aria-hidden="true" hidden>
+                    <div id="tunnel-detail-content" class="tunnel-detail-content" aria-live="polite"></div>
+                </aside>
+
                 <footer class="map-statusbar">
 
                     <div class="statusbar-item">
@@ -273,6 +289,7 @@
     </div>
 
     <script src="https://unpkg.com/maplibre-gl@5.6.2/dist/maplibre-gl.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
     <script src="./js/sidebar.js"></script>
     <script src="./js/popup.js"></script>
     <script src="./js/layer-styles.js"></script>
@@ -280,6 +297,10 @@
     <script src="./js/map.js"></script>
     <script src="./js/map-tools.js"></script>
     <script src="./js/layer-panel.js"></script>
+    <script src="./js/tunnel-detail.js"></script>
+    <script src="./js/tunnel-faces.js"></script>
+    <script src="./js/tunnel-charts.js"></script>
+    <script src="./js/dashboard.js"></script>
 
 </body>
 

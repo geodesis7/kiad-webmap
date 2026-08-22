@@ -307,6 +307,13 @@ map.on("load", () => {
 
         map.on("click", layerId, (event) => {
 
+            if (
+                typeof isTunnelFaceMarkerAtPoint === "function" &&
+                isTunnelFaceMarkerAtPoint(event.point)
+            ) {
+                return;
+            }
+
             const feature = event.features?.[0];
 
             if (!feature) {
@@ -314,15 +321,7 @@ map.on("load", () => {
             }
 
             const properties = feature.properties ?? {};
-            const popupHtml = createPopupHtml(properties);
-
-            new maplibregl.Popup({
-                closeButton: true,
-                closeOnClick: true
-            })
-                .setLngLat(event.lngLat)
-                .setHTML(popupHtml)
-                .addTo(map);
+            openAssetPopup(map, properties, event.lngLat);
         });
     });
 

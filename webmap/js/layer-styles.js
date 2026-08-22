@@ -73,7 +73,7 @@ const ASSET_STYLES = {
 
 
     tunnels: {
-        color: "#7c3aed",
+        color: "#1e3a8a",
 
         fill: {
             opacity: 0.42
@@ -345,6 +345,48 @@ const ASSET_STYLES = {
 
             allowOverlap: true,
             ignorePlacement: true
+        }
+    },
+
+
+    "tunnel-faces": {
+        minZoom: 11,
+
+        active: {
+            color: "#16a36a",
+            radius: 7,
+            opacity: 0.96,
+            strokeColor: "#ffffff",
+            strokeWidth: 2.5
+        },
+
+        closed: {
+            color: "#64748b",
+            radius: 5,
+            opacity: 0.58,
+            strokeColor: "#ffffff",
+            strokeWidth: 1.5
+        },
+
+        selected: {
+            color: "#f59e0b",
+            radius: 10,
+            strokeColor: "#7c2d12",
+            strokeWidth: 3,
+            haloColor: "#fbbf24",
+            haloRadius: 15,
+            haloOpacity: 0.28
+        },
+
+        label: {
+            minZoom: 14,
+            field: "face_code",
+            size: 12,
+            offset: [0, 1.35],
+            color: "#172554",
+            haloColor: "#ffffff",
+            haloWidth: 2,
+            allowOverlap: false
         }
     }
 };
