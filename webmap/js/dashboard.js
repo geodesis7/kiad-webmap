@@ -265,11 +265,6 @@ function createDashboardTunnelSchematic(tunnel) {
                 ${createDashboardStageTrack(tunnel, "lower", "Alt Yarı")}
                 ${createDashboardStageTrack(tunnel, "invert", "Invert")}
             </div>
-
-            <div class="dashboard-tunnel-mobile">
-                ${createDashboardMobileFace(tunnel, "entrance", "GİRİŞ")}
-                ${createDashboardMobileFace(tunnel, "exit", "ÇIKIŞ")}
-            </div>
         </article>
     `;
 }
@@ -281,14 +276,16 @@ function createDashboardStageTrack(tunnel, stage, label) {
     return `
         <div class="dashboard-stage-row is-${stage}">
             <span class="dashboard-stage-label">${escapeDashboardHtml(label)}</span>
+            <strong class="dashboard-stage-percent is-entrance">
+                ${escapeDashboardHtml(formatDashboardPercent(entrance?.percent))}
+            </strong>
             <div class="dashboard-stage-track">
                 ${createDashboardStageHalf(tunnel, entrance, "entrance", label)}
                 ${createDashboardStageHalf(tunnel, exit, "exit", label)}
             </div>
-            <div class="dashboard-stage-values">
-                <span>${escapeDashboardHtml(formatDashboardPercent(entrance?.percent))}</span>
-                <span>${escapeDashboardHtml(formatDashboardPercent(exit?.percent))}</span>
-            </div>
+            <strong class="dashboard-stage-percent is-exit">
+                ${escapeDashboardHtml(formatDashboardPercent(exit?.percent))}
+            </strong>
         </div>
     `;
 }
@@ -305,36 +302,6 @@ function createDashboardStageHalf(tunnel, metric, side, stageLabel) {
                 </span>
             `}
         </span>
-    `;
-}
-
-function createDashboardMobileFace(tunnel, side, sideLabel) {
-    const face = tunnel.faces?.[side];
-    const stages = [
-        ["upper", "Üst Yarı"],
-        ["lower", "Alt Yarı"],
-        ["invert", "Invert"]
-    ];
-
-    return `
-        <section class="dashboard-mobile-face">
-            <header>
-                <strong>${sideLabel}</strong>
-                <span>${escapeDashboardHtml(formatTunnelFallback(face?.face_code))}</span>
-            </header>
-            ${stages.map(([stage, label]) => {
-                const metric = getDashboardStageMetric(tunnel, side, stage);
-                const width = getDashboardFullWidth(metric?.percent);
-                return `
-                    <div class="dashboard-mobile-stage is-${stage}"
-                        title="${escapeDashboardHtml(createDashboardStageTooltipText(tunnel, side, label, metric))}">
-                        <span>${label}</span>
-                        <div><i style="width:${width}%"></i></div>
-                        <strong>${escapeDashboardHtml(formatDashboardPercent(metric?.percent))}</strong>
-                    </div>
-                `;
-            }).join("")}
-        </section>
     `;
 }
 
@@ -365,13 +332,6 @@ function getDashboardHalfWidth(percent) {
     const numericPercent = Number(percent);
     return Number.isFinite(numericPercent)
         ? Math.min(100, Math.max(0, numericPercent * 2))
-        : 0;
-}
-
-function getDashboardFullWidth(percent) {
-    const numericPercent = Number(percent);
-    return Number.isFinite(numericPercent)
-        ? Math.min(100, Math.max(0, numericPercent))
         : 0;
 }
 

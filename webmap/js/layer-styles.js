@@ -138,17 +138,23 @@ const ASSET_STYLES = {
         color: "#aa549f",
 
         fill: {
-            opacity: 0.40
+            opacity: [
+                "step",
+                ["zoom"],
+                0.80,
+                6, 0.60,
+                10, 0.40
+            ]
         },
 
         line: {
+            geometryType: "Polygon",
             width: [
-                "interpolate",
-                ["linear"],
+                "step",
                 ["zoom"],
-                7, 2,
-                12, 5,
-                16, 8
+                5,
+                6, 4,
+                10, 6
             ],
             opacity: 1,
             cap: "round",
@@ -346,6 +352,25 @@ const ASSET_STYLES = {
             allowOverlap: true,
             ignorePlacement: true
         }
+    },
+
+
+    alignmentKmLabels: {
+        minZoom: 8,
+        size: [
+            "interpolate",
+            ["linear"],
+            ["zoom"],
+            8, 9,
+            12, 10,
+            15, 11
+        ],
+        offset: [0, 0.8],
+        anchor: "top",
+        color: "#475569",
+        opacity: 0.94,
+        haloColor: "rgba(255, 255, 255, 0.88)",
+        haloWidth: 1.25
     },
 
 

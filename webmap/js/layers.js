@@ -123,7 +123,7 @@ function addAssetLineLayer(map, group) {
 
         filter: buildAssetFilter(
             group,
-            "LineString"
+            style.line?.geometryType ?? "LineString"
         ),
 
         layout: {
@@ -347,7 +347,8 @@ function setAssetGroupSelection(
         },
         {
             layerId: `${group.id}-lines`,
-            geometryType: "LineString"
+            geometryType:
+                style.line?.geometryType ?? "LineString"
         },
         {
             layerId: `${group.id}-points`,

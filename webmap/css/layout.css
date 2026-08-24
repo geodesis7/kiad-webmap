@@ -368,4 +368,13 @@
     .map-statusbar {
         padding: 0 10px;
     }
+
+    .statusbar-zoom .statusbar-label {
+        font-size: 0;
+    }
+
+    .statusbar-zoom .statusbar-label::after {
+        content: "Z";
+        font-size: 11px;
+    }
 }

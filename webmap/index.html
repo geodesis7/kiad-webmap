@@ -12,7 +12,7 @@
 
     <link href="https://unpkg.com/maplibre-gl@5.6.2/dist/maplibre-gl.css" rel="stylesheet">
 
-    <link rel="stylesheet" href="./css/styles.css?v=2">
+    <link rel="stylesheet" href="./css/styles.css?v=4">
 </head>
 
 <body>
@@ -273,6 +273,18 @@
                         <strong>WGS 84</strong>
                     </div>
 
+                    <div class="statusbar-divider"></div>
+
+                    <div class="statusbar-item statusbar-zoom">
+                        <span class="statusbar-label">
+                            Zoom
+                        </span>
+
+                        <strong id="map-zoom-level">
+                            10.00
+                        </strong>
+                    </div>
+
                     <div class="statusbar-spacer"></div>
 
                     <div class="statusbar-item">
@@ -292,9 +304,10 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
     <script src="./js/sidebar.js"></script>
     <script src="./js/popup.js"></script>
-    <script src="./js/layer-styles.js"></script>
+    <script src="./js/layer-styles.js?v=2"></script>
     <script src="./js/layers.js"></script>
     <script src="./js/map.js"></script>
+    <script src="./js/alignment-km.js?v=2"></script>
     <script src="./js/map-tools.js"></script>
     <script src="./js/layer-panel.js"></script>
     <script src="./js/tunnel-detail.js"></script>

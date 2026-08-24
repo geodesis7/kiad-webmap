@@ -125,6 +125,24 @@ map.addControl(
 
 const coordinateElement =
     document.getElementById("mouse-coordinates");
+const zoomElement =
+    document.getElementById("map-zoom-level");
+
+function updateZoomDisplay() {
+    if (!zoomElement) {
+        return;
+    }
+
+    const zoom = map.getZoom();
+
+    zoomElement.textContent = Number.isFinite(zoom)
+        ? zoom.toFixed(2)
+        : "-";
+}
+
+map.on("zoom", updateZoomDisplay);
+map.on("load", updateZoomDisplay);
+updateZoomDisplay();
 
 map.on("mousemove", (event) => {
     if (!coordinateElement) {
