@@ -73,7 +73,7 @@ const map = new maplibregl.Map({
                 type: "raster",
                 source: "basemap-osm-source",
                 layout: {
-                    visibility: "visible"
+                    visibility: "none"
                 }
             },
 
@@ -82,7 +82,7 @@ const map = new maplibregl.Map({
                 type: "raster",
                 source: "basemap-satellite-source",
                 layout: {
-                    visibility: "none"
+                    visibility: "visible"
                 }
             },
 
@@ -107,7 +107,7 @@ const map = new maplibregl.Map({
     },
 
     center: [44.009898, 40.169439],
-    zoom: 8
+    zoom: 10
 });
 
 map.addControl(
