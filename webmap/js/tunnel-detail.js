@@ -31,6 +31,10 @@ async function loadTunnelDetail(assetId, options = {}) {
         return;
     }
 
+    if (typeof window.closeViaductDetailDrawer === "function") {
+        window.closeViaductDetailDrawer();
+    }
+
     pendingTunnelDetailView = normalizeTunnelDetailView(options);
 
     if (

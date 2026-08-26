@@ -123,6 +123,21 @@ function formatPopupDate(value) {
         : date.toLocaleDateString("tr-TR");
 }
 
+function formatPopupDateTime(value) {
+    if (value === null || value === undefined || value === "") {
+        return null;
+    }
+
+    const date = new Date(String(value));
+
+    return Number.isNaN(date.getTime())
+        ? String(value)
+        : date.toLocaleString("tr-TR", {
+            dateStyle: "short",
+            timeStyle: "short"
+        });
+}
+
 function formatMetricValue(value, unit) {
     const number = toFiniteNumber(value);
 
@@ -179,20 +194,22 @@ function ensurePopupVisible(mapInstance, popup) {
         }
     }
 
-    const drawer = document.getElementById("tunnel-detail-drawer");
+    ["tunnel-detail-drawer", "viaduct-detail-drawer"].forEach((drawerId) => {
+        const drawer = document.getElementById(drawerId);
 
-    if (
-        drawer &&
-        !drawer.hidden &&
-        drawer.classList.contains("is-open")
-    ) {
-        const drawerRect = drawer.getBoundingClientRect();
+        if (
+            drawer &&
+            !drawer.hidden &&
+            drawer.classList.contains("is-open")
+        ) {
+            const drawerRect = drawer.getBoundingClientRect();
 
-        visibleBounds.right = Math.min(
-            visibleBounds.right,
-            drawerRect.left - safeGap
-        );
-    }
+            visibleBounds.right = Math.min(
+                visibleBounds.right,
+                drawerRect.left - safeGap
+            );
+        }
+    });
 
     if (
         visibleBounds.right <= visibleBounds.left ||
@@ -269,8 +286,8 @@ function createPopupHtml(properties = {}) {
             properties.section_name
         );
 
-    const tunnelDetailAction =
-        createTunnelDetailAction(properties);
+    const assetDetailAction =
+        createAssetDetailAction(properties);
 
     const rows = [
         createPopupRow(
@@ -348,10 +365,17 @@ function createPopupHtml(properties = {}) {
                 ${rows || createEmptyPopupMessage()}
             </div>
 
-            ${tunnelDetailAction}
+            ${assetDetailAction}
 
         </article>
     `;
+}
+
+function createAssetDetailAction(properties = {}) {
+    return [
+        createTunnelDetailAction(properties),
+        createViaductDetailAction(properties)
+    ].filter(Boolean).join("");
 }
 
 /**
@@ -381,6 +405,27 @@ function createTunnelDetailAction(properties = {}) {
     `;
 }
 
+function createViaductDetailAction(properties = {}) {
+    const typeId = toFiniteNumber(properties.type_id);
+    const assetId = toFiniteNumber(properties.asset_id);
+
+    if (typeId !== 5 || assetId === null) {
+        return "";
+    }
+
+    return `
+        <footer class="asset-popup-actions">
+            <button
+                class="tunnel-detail-button"
+                type="button"
+                data-popup-action="open-viaduct-detail"
+            >
+                Viyadük Detayını Aç
+            </button>
+        </footer>
+    `;
+}
+
 /**
  * Popup içindeki aksiyonları ilgili varlığa bağlar.
  *
@@ -388,17 +433,19 @@ function createTunnelDetailAction(properties = {}) {
  * @param {Record<string, unknown>} properties
  */
 function bindPopupActions(popup, properties = {}) {
-    const button = popup
+    popup
         .getElement()
-        ?.querySelector('[data-popup-action="open-tunnel-detail"]');
+        ?.querySelector('[data-popup-action="open-tunnel-detail"]')
+        ?.addEventListener("click", () => {
+            openTunnelDetailDrawer(properties.asset_id);
+        });
 
-    if (!button) {
-        return;
-    }
-
-    button.addEventListener("click", () => {
-        openTunnelDetailDrawer(properties.asset_id);
-    });
+    popup
+        .getElement()
+        ?.querySelector('[data-popup-action="open-viaduct-detail"]')
+        ?.addEventListener("click", () => {
+            openViaductDetailDrawer(properties.asset_id);
+        });
 }
 
 /**
@@ -416,6 +463,22 @@ function openTunnelDetailDrawer(assetId) {
 
     window.dispatchEvent(
         new CustomEvent("kiad:tunnel-detail-open", {
+            detail: {
+                assetId: normalizedAssetId
+            }
+        })
+    );
+}
+
+function openViaductDetailDrawer(assetId) {
+    const normalizedAssetId = toFiniteNumber(assetId);
+
+    if (normalizedAssetId === null) {
+        return;
+    }
+
+    window.dispatchEvent(
+        new CustomEvent("kiad:viaduct-detail-open", {
             detail: {
                 assetId: normalizedAssetId
             }
@@ -455,7 +518,7 @@ function createPopupRow(label, value) {
 }
 
 /**
- * Kilometre değerini 67+560 biçimine dönüştürür.
+ * Kilometre değerini 67+560 veya 86+092.900 biçimine dönüştürür.
  *
  * Beklenen ham değer örneği:
  * 67560 -> 67+560
@@ -470,11 +533,19 @@ function formatKilometer(value) {
         return null;
     }
 
-    const roundedValue = Math.round(numericValue);
+    const sign = numericValue < 0 ? "-" : "";
+    const absoluteValue = Math.abs(numericValue);
+    const hasFraction = !Number.isInteger(absoluteValue);
+    const roundedValue = hasFraction
+        ? Math.round(absoluteValue * 1000) / 1000
+        : Math.round(absoluteValue);
     const kilometer = Math.floor(roundedValue / 1000);
-    const meter = Math.abs(roundedValue % 1000);
+    const meter = roundedValue - (kilometer * 1000);
+    const meterText = hasFraction
+        ? meter.toFixed(3).padStart(7, "0")
+        : String(Math.round(meter)).padStart(3, "0");
 
-    return `${kilometer}+${String(meter).padStart(3, "0")}`;
+    return `${sign}${kilometer}+${meterText}`;
 }
 
 /**
@@ -661,6 +732,10 @@ function escapeHtml(value) {
 }
 
 function formatProgress(value) {
+    return formatPercent(value, 1);
+}
+
+function formatPercent(value, maximumFractionDigits = 2) {
     const numericValue = toFiniteNumber(value);
 
     if (numericValue === null) {
@@ -668,6 +743,6 @@ function formatProgress(value) {
     }
 
     return `%${numericValue.toLocaleString("tr-TR", {
-        maximumFractionDigits: 1
+        maximumFractionDigits
     })}`;
 }

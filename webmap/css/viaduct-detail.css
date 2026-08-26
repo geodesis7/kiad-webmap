@@ -1,0 +1,342 @@
+.viaduct-detail-drawer {
+    z-index: 15;
+}
+
+.viaduct-detail-tabs .tunnel-detail-tab {
+    padding-inline: 10px;
+}
+
+.viaduct-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.viaduct-quality-notice {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    margin-bottom: 14px;
+    padding: 13px 14px;
+    border: 1px solid #f1d7a3;
+    border-radius: 11px;
+    color: #75500f;
+    background: #fff8e8;
+    box-shadow: var(--shadow-small);
+}
+
+.viaduct-quality-notice div {
+    min-width: 0;
+}
+
+.viaduct-quality-notice strong,
+.viaduct-quality-notice span {
+    display: block;
+}
+
+.viaduct-quality-notice strong {
+    margin-bottom: 4px;
+    color: #65430a;
+    font-size: 12px;
+}
+
+.viaduct-quality-notice span,
+.viaduct-quality-notice time {
+    font-size: 9px;
+}
+
+.viaduct-quality-notice time {
+    flex: 0 0 auto;
+    color: #8b6420;
+}
+
+.viaduct-progress-list,
+.viaduct-card-list,
+.viaduct-span-list,
+.viaduct-elements {
+    display: grid;
+    gap: 11px;
+}
+
+.viaduct-progress-item + .viaduct-progress-item {
+    padding-top: 13px;
+    border-top: 1px solid #edf0f2;
+}
+
+.viaduct-progress-heading {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 9px;
+}
+
+.viaduct-progress-heading strong,
+.viaduct-progress-heading span {
+    display: block;
+}
+
+.viaduct-progress-heading strong {
+    color: var(--color-primary-900);
+    font-size: 11px;
+}
+
+.viaduct-progress-heading span {
+    margin-top: 3px;
+    color: var(--color-text-muted);
+    font-size: 10px;
+}
+
+.viaduct-progress-heading b {
+    color: var(--color-success);
+    font-size: 13px;
+}
+
+.viaduct-status-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 7px;
+}
+
+.viaduct-status-card {
+    min-width: 0;
+    padding: 10px 8px;
+    border: 1px solid #e5eaf0;
+    border-top: 3px solid #9aa6b2;
+    border-radius: 8px;
+    background: var(--color-surface-soft);
+    text-align: center;
+}
+
+.viaduct-status-card.is-completed { border-top-color: var(--color-success); }
+.viaduct-status-card.is-progress { border-top-color: #d99a2b; }
+.viaduct-status-card.is-waiting { border-top-color: #718096; }
+.viaduct-status-card.is-unknown { border-top-color: #a8b1bc; }
+
+.viaduct-status-card span {
+    display: block;
+    min-height: 24px;
+    color: var(--color-text-muted);
+    font-size: 8px;
+    line-height: 1.35;
+}
+
+.viaduct-status-card strong {
+    display: block;
+    margin-top: 4px;
+    color: var(--color-primary-900);
+    font-size: 14px;
+}
+
+.viaduct-structure-card,
+.viaduct-pile-card,
+.viaduct-span-card {
+    border: 1px solid var(--color-border);
+    border-radius: 11px;
+    background: var(--color-surface);
+    box-shadow: var(--shadow-small);
+}
+
+.viaduct-structure-card > summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 13px 14px;
+    list-style: none;
+    cursor: pointer;
+}
+
+.viaduct-structure-card > summary::-webkit-details-marker {
+    display: none;
+}
+
+.viaduct-structure-card > summary::after {
+    content: "+";
+    width: 24px;
+    height: 24px;
+    flex: 0 0 24px;
+    display: grid;
+    place-items: center;
+    border-radius: 6px;
+    color: var(--color-primary-800);
+    background: var(--color-surface-soft);
+    font-size: 16px;
+    font-weight: 700;
+}
+
+.viaduct-structure-card[open] > summary::after {
+    content: "−";
+}
+
+.viaduct-card-title {
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+.viaduct-card-title span,
+.viaduct-card-title strong,
+.viaduct-card-title small {
+    display: block;
+}
+
+.viaduct-card-title span {
+    color: var(--color-text-muted);
+    font-size: 8px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.viaduct-card-title strong {
+    margin: 3px 0;
+    color: var(--color-primary-900);
+    font-size: 14px;
+}
+
+.viaduct-card-title small {
+    color: var(--color-text-muted);
+    font-size: 9px;
+}
+
+.viaduct-card-summary {
+    flex: 0 0 auto;
+    text-align: right;
+}
+
+.viaduct-card-summary strong,
+.viaduct-card-summary span {
+    display: block;
+}
+
+.viaduct-card-summary strong {
+    color: var(--color-primary-900);
+    font-size: 10px;
+}
+
+.viaduct-card-summary span {
+    margin-top: 4px;
+    color: var(--color-text-muted);
+    font-size: 9px;
+}
+
+.viaduct-card-body {
+    padding: 13px 14px 14px;
+    border-top: 1px solid #edf0f2;
+}
+
+.viaduct-elements {
+    margin-top: 12px;
+}
+
+.viaduct-element-card {
+    padding: 11px 12px;
+    border: 1px solid #e6ebf0;
+    border-radius: 8px;
+    background: var(--color-surface-soft);
+}
+
+.viaduct-element-card > strong {
+    display: block;
+    margin-bottom: 8px;
+    color: var(--color-primary-900);
+    font-size: 11px;
+}
+
+.viaduct-element-card > span,
+.viaduct-inline-empty {
+    color: var(--color-text-muted);
+    font-size: 10px;
+}
+
+.viaduct-element-card dl,
+.viaduct-compact-info {
+    display: grid;
+    gap: 7px;
+    margin: 0;
+}
+
+.viaduct-element-card dl > div,
+.viaduct-compact-info > div {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 9px;
+}
+
+.viaduct-element-card dt,
+.viaduct-compact-info dt {
+    color: var(--color-text-muted);
+}
+
+.viaduct-element-card dd,
+.viaduct-compact-info dd {
+    margin: 0;
+    color: var(--color-text);
+    font-weight: 700;
+    text-align: right;
+}
+
+.viaduct-pile-card,
+.viaduct-span-card {
+    padding: 14px;
+}
+
+.viaduct-pile-card > header,
+.viaduct-span-card > header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.viaduct-pile-card > header div span,
+.viaduct-pile-card > header div strong {
+    display: block;
+}
+
+.viaduct-pile-card > header div span {
+    color: var(--color-text-muted);
+    font-size: 8px;
+    text-transform: uppercase;
+}
+
+.viaduct-pile-card > header div strong,
+.viaduct-span-card > header strong {
+    margin-top: 3px;
+    color: var(--color-primary-900);
+    font-size: 14px;
+}
+
+.viaduct-span-card > header span {
+    color: var(--color-text-muted);
+    font-size: 10px;
+}
+
+.viaduct-pile-card .viaduct-compact-info,
+.viaduct-span-card .viaduct-compact-info {
+    margin-top: 13px;
+    padding-top: 11px;
+    border-top: 1px solid #edf0f2;
+}
+
+.viaduct-warning-badge {
+    padding: 5px 7px;
+    border-radius: 999px;
+    color: #8a5a0b;
+    background: #fff2d3;
+    font-size: 8px;
+    font-weight: 800;
+}
+
+@media (max-width: 420px) {
+    .viaduct-status-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .viaduct-quality-notice {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+}
+

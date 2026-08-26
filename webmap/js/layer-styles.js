@@ -153,8 +153,8 @@ const ASSET_STYLES = {
                 "step",
                 ["zoom"],
                 5,
-                6, 4,
-                10, 6
+                6, 2,
+                10, 4
             ],
             opacity: 1,
             cap: "round",

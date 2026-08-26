@@ -3,8 +3,9 @@
 @import url("./map-tools.css");
 @import url("./popup.css");
 @import url("./tunnel-detail.css");
+@import url("./viaduct-detail.css");
 @import url("./tunnel-charts.css");
-@import url("./dashboard.css");
+@import url("./dashboard.css?v=4");
 
 
 :root {

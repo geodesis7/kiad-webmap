@@ -78,6 +78,14 @@ function renderLayerTree(assets, dsmSections = []) {
         );
     });
 
+    window.dispatchEvent(
+        new CustomEvent("kiad:assets-loaded", {
+            detail: {
+                count: assetsById.size
+            }
+        })
+    );
+
     const groups = ASSET_LAYER_GROUPS
         .map((group) => {
 

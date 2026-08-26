@@ -12,7 +12,7 @@
 
     <link href="https://unpkg.com/maplibre-gl@5.6.2/dist/maplibre-gl.css" rel="stylesheet">
 
-    <link rel="stylesheet" href="./css/styles.css?v=4">
+    <link rel="stylesheet" href="./css/styles.css?v=9">
 </head>
 
 <body>
@@ -251,6 +251,12 @@
                     <div id="tunnel-detail-content" class="tunnel-detail-content" aria-live="polite"></div>
                 </aside>
 
+                <aside id="viaduct-detail-drawer" class="tunnel-detail-drawer viaduct-detail-drawer"
+                    aria-labelledby="viaduct-detail-title" aria-hidden="true" hidden>
+                    <div id="viaduct-detail-content" class="tunnel-detail-content viaduct-detail-content"
+                        aria-live="polite"></div>
+                </aside>
+
                 <footer class="map-statusbar">
 
                     <div class="statusbar-item">
@@ -309,11 +315,12 @@
     <script src="./js/map.js"></script>
     <script src="./js/dsm.js?v=2"></script>
     <script src="./js/alignment-km.js?v=3"></script>
-    <script src="./js/layer-panel.js"></script>
+    <script src="./js/layer-panel.js?v=2"></script>
     <script src="./js/tunnel-detail.js"></script>
+    <script src="./js/viaduct-detail.js"></script>
     <script src="./js/tunnel-faces.js"></script>
     <script src="./js/tunnel-charts.js"></script>
-    <script src="./js/dashboard.js"></script>
+    <script src="./js/dashboard.js?v=3"></script>
 
 </body>
 
