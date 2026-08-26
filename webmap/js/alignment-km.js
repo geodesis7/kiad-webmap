@@ -2,8 +2,8 @@
 
 const ALIGNMENT_KM_SOURCE_ID = "alignment-km-source";
 const ALIGNMENT_KM_SOURCE_LAYER = "public.vw_alignment_km_points_4326";
-// DB kilometraj verileri düzeltilene kadar harita gösterimi askıya alındı.
-const ALIGNMENT_KM_ENABLED = false;
+// Excel kaynaklı kilometraj tablosu ve yayın view'i doğrulandı.
+const ALIGNMENT_KM_ENABLED = true;
 const ALIGNMENT_KM_LAYER_DEFINITIONS = [
     { id: "alignment-km-50km", minZoom: 8, maxZoom: 10, interval: 50000 },
     { id: "alignment-km-20km", minZoom: 10, maxZoom: 11, interval: 20000 },

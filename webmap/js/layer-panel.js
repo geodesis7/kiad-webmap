@@ -27,19 +27,23 @@ async function loadLayerPanel() {
     }
 
     try {
-        const response = await fetch(
-            `${API_BASE_URL}/api/assets`
-        );
+        const [assetResponse, dsmSectionResponse] = await Promise.all([
+            fetch(`${API_BASE_URL}/api/assets`),
+            fetch(`${API_BASE_URL}/api/dsm/sections`)
+        ]);
 
-        if (!response.ok) {
+        if (!assetResponse.ok || !dsmSectionResponse.ok) {
             throw new Error(
-                `API isteği başarısız: ${response.status}`
+                `API isteği başarısız: assets=${assetResponse.status}, dsm=${dsmSectionResponse.status}`
             );
         }
 
-        const assets = await response.json();
+        const [assets, dsmSections] = await Promise.all([
+            assetResponse.json(),
+            dsmSectionResponse.json()
+        ]);
 
-        renderLayerTree(assets);
+        renderLayerTree(assets, dsmSections);
 
     } catch (error) {
         console.error(
@@ -60,8 +64,8 @@ async function loadLayerPanel() {
  * API'den gelen assetleri layers.js içindeki
  * MapLibre gruplarına göre organize eder.
  */
-function renderLayerTree(assets) {
-    if (!Array.isArray(assets)) {
+function renderLayerTree(assets, dsmSections = []) {
+    if (!Array.isArray(assets) || !Array.isArray(dsmSections)) {
         return;
     }
 
@@ -106,28 +110,145 @@ function renderLayerTree(assets) {
 
     if (layerGroupCount) {
         layerGroupCount.textContent =
-            String(groups.length);
+            String(groups.length + 1);
     }
 
 
-    if (groups.length === 0) {
-        layerTree.innerHTML = `
-            <div class="layer-tree-empty">
-                Gösterilecek proje varlığı bulunamadı.
-            </div>
-        `;
-
-        return;
-    }
-
-
-    layerTree.innerHTML =
-        groups
-            .map(createLayerGroupHtml)
-            .join("");
+    layerTree.innerHTML = [
+        ...groups.map(createLayerGroupHtml),
+        createDsmLayerHtml(dsmSections)
+    ].join("");
 
 
     bindLayerTreeEvents(groups);
+    bindDsmLayerEvents(dsmSections);
+}
+
+function createDsmLayerHtml(sections) {
+    const layerColor = ASSET_STYLES.dsm?.color ?? "#0e7490";
+    const totalCount = sections.reduce(
+        (total, section) => total + Number(section.count || 0),
+        0
+    );
+    const sectionRows = sections
+        .map(createDsmSectionRowHtml)
+        .join("");
+
+    return `
+        <section class="layer-group layer-group-operation is-open" data-group-id="dsm">
+            <div class="layer-group-header">
+                <button class="layer-group-expand" type="button" aria-expanded="true">
+                    <span class="layer-group-chevron">›</span>
+                </button>
+                <label class="layer-group-checkbox" title="DSM noktalarını ve etiketlerini göster veya gizle">
+                    <input class="dsm-layer-toggle" type="checkbox" checked>
+                    <span class="custom-checkbox"></span>
+                </label>
+                <button class="layer-group-title dsm-group-title" type="button">
+                    <span class="layer-symbol" style="--layer-color: ${escapeAttribute(layerColor)};"></span>
+                    <span class="layer-group-name">DSM</span>
+                </button>
+                <span class="layer-group-count">${totalCount}</span>
+            </div>
+            <div class="layer-group-assets dsm-section-list">
+                ${sectionRows || '<div class="layer-tree-empty">DSM kısmı bulunamadı.</div>'}
+            </div>
+        </section>
+    `;
+}
+
+function createDsmSectionRowHtml(section) {
+    const sectionCode = String(section.section_code ?? "");
+    const sectionLabel = formatDsmSectionLabel(sectionCode);
+
+    return `
+        <div class="layer-asset dsm-section-row" data-section-code="${escapeAttribute(sectionCode)}">
+            <label class="layer-asset-checkbox" title="${escapeAttribute(sectionLabel)} DSM noktalarını göster veya gizle">
+                <input class="dsm-section-toggle" type="checkbox" value="${escapeAttribute(sectionCode)}" checked>
+                <span class="custom-checkbox"></span>
+            </label>
+            <button class="layer-asset-name dsm-section-name" type="button" data-section-code="${escapeAttribute(sectionCode)}">
+                <span class="layer-asset-primary">${escapeHtml(sectionLabel)}</span>
+                <span class="layer-asset-secondary">${escapeHtml(sectionCode)}</span>
+            </button>
+            <span class="layer-group-count dsm-section-count">${Number(section.count || 0)}</span>
+        </div>
+    `;
+}
+
+function formatDsmSectionLabel(sectionCode) {
+    const numericMatch = String(sectionCode).match(/(\d+)\s*$/);
+
+    return numericMatch
+        ? `Kısım ${Number(numericMatch[1])}`
+        : String(sectionCode);
+}
+
+function bindDsmLayerEvents(sections) {
+    const groupElement = layerTree?.querySelector('[data-group-id="dsm"]');
+
+    if (!groupElement) {
+        return;
+    }
+
+    const expandButton = groupElement.querySelector(".layer-group-expand");
+    const titleButton = groupElement.querySelector(".dsm-group-title");
+    const sectionContainer = groupElement.querySelector(".dsm-section-list");
+    const groupToggle = groupElement.querySelector(".dsm-layer-toggle");
+    const sectionToggles = Array.from(groupElement.querySelectorAll(".dsm-section-toggle"));
+
+    const toggleAccordion = () => {
+        const isOpen = !sectionContainer.hidden;
+        sectionContainer.hidden = isOpen;
+        groupElement.classList.toggle("is-open", !isOpen);
+        expandButton?.setAttribute("aria-expanded", String(!isOpen));
+    };
+
+    expandButton?.addEventListener("click", toggleAccordion);
+    titleButton?.addEventListener("click", toggleAccordion);
+
+    groupToggle?.addEventListener("change", () => {
+        sectionToggles.forEach((toggle) => {
+            toggle.checked = groupToggle.checked;
+        });
+        groupToggle.indeterminate = false;
+        updateDsmMapSelection(groupToggle, sectionToggles);
+    });
+
+    sectionToggles.forEach((toggle) => {
+        toggle.addEventListener("change", () => {
+            updateParentCheckbox(groupToggle, sectionToggles);
+            updateDsmMapSelection(groupToggle, sectionToggles);
+        });
+    });
+
+    groupElement.querySelectorAll(".dsm-section-name").forEach((button) => {
+        button.addEventListener("click", () => {
+            const section = sections.find(
+                (candidate) => String(candidate.section_code) === button.dataset.sectionCode
+            );
+
+            if (section && typeof focusDsmSection === "function") {
+                focusDsmSection(map, section.bbox);
+            }
+        });
+    });
+
+    updateDsmMapSelection(groupToggle, sectionToggles);
+}
+
+function updateDsmMapSelection(groupToggle, sectionToggles) {
+    const selectedSectionCodes = sectionToggles
+        .filter((toggle) => toggle.checked)
+        .map((toggle) => toggle.value);
+
+    if (typeof setDsmVisibility === "function") {
+        setDsmVisibility(map, Boolean(groupToggle?.checked || groupToggle?.indeterminate));
+    }
+
+    if (typeof setDsmSectionSelection === "function") {
+        setDsmSectionSelection(map, selectedSectionCodes);
+    }
 }
 
 

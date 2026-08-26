@@ -104,10 +104,10 @@ const ASSET_STYLES = {
 
 
     "cut-cover-tunnels": {
-        color: "#d97706",
+        color: "#d97706ab",
 
         fill: {
-            opacity: 0.42
+            opacity: 0.62
         },
 
         line: {
@@ -371,6 +371,105 @@ const ASSET_STYLES = {
         opacity: 0.94,
         haloColor: "rgba(255, 255, 255, 0.88)",
         haloWidth: 1.25
+    },
+
+
+    dsm: {
+        color: "#0e7490",
+        minZoom: 14,
+
+        point: {
+            radius: [
+                "interpolate",
+                ["exponential", 2],
+                ["zoom"],
+                0, 2,
+                17, 2,
+                18, 2.18,
+                19, 4.37,
+                20, 8.74,
+                22, 34.96
+            ],
+            opacity: 0.94,
+            strokeColor: "#ffffff",
+            strokeWidth: 1
+        },
+
+        label: {
+            field: "column_name",
+            minZoom: 18,
+            size: 11,
+            offset: [0, 1],
+            anchor: "top",
+            color: "#164e63",
+            haloColor: "rgba(255, 255, 255, 0.94)",
+            haloWidth: 1.5,
+            allowOverlap: false
+        }
+    },
+
+
+    excavations: {
+        color: "#b45309",
+
+        fill: {
+            opacity: [
+                "interpolate",
+                ["linear"],
+                ["zoom"],
+                7, 0.14,
+                12, 0.20,
+                16, 0.27
+            ],
+            outlineColor: "#92400e"
+        },
+
+        line: {
+            width: 2,
+            opacity: 0.88,
+            cap: "round",
+            join: "round"
+        },
+
+        point: {
+            radius: 5,
+            color: "#b45309",
+            opacity: 0.92,
+            strokeColor: "#fff7ed",
+            strokeWidth: 1.5
+        }
+    },
+
+
+    fills: {
+        color: "#65752f",
+
+        fill: {
+            opacity: [
+                "interpolate",
+                ["linear"],
+                ["zoom"],
+                7, 0.13,
+                12, 0.19,
+                16, 0.26
+            ],
+            outlineColor: "#4d5f24"
+        },
+
+        line: {
+            width: 2,
+            opacity: 0.88,
+            cap: "round",
+            join: "round"
+        },
+
+        point: {
+            radius: 5,
+            color: "#65752f",
+            opacity: 0.92,
+            strokeColor: "#f7fee7",
+            strokeWidth: 1.5
+        }
     },
 
 

@@ -52,8 +52,23 @@ const ASSET_LAYER_GROUPS = [
         id: "stations",
         label: "İstasyonlar",
         typeId: 2
+    },
+    {
+        id: "excavations",
+        label: "Kazılar",
+        typeId: 10
+    },
+    {
+        id: "fills",
+        label: "Dolgular",
+        typeId: 11
     }
 ];
+
+const BACKGROUND_ASSET_GROUP_IDS = new Set([
+    "excavations",
+    "fills"
+]);
 
 function getAssetStyle(groupId) {
     const style = ASSET_STYLES[groupId];
@@ -71,7 +86,7 @@ function getAssetStyle(groupId) {
 }
 
 function addAssetLayers(map) {
-    ASSET_LAYER_GROUPS.forEach((group) => {
+    getAssetRenderGroups().forEach((group) => {
         addAssetPolygonLayer(map, group);
         addAssetLineLayer(map, group);
         addAssetPointLayer(map, group);
@@ -278,9 +293,20 @@ function setAssetLayerVisibility(map, groupId, isVisible) {
 }
 
 function getInteractiveAssetLayerIds() {
-    return ASSET_LAYER_GROUPS.flatMap((group) => {
+    return getAssetRenderGroups().flatMap((group) => {
         return getAssetLayerIds(group.id);
     });
+}
+
+function getAssetRenderGroups() {
+    return [
+        ...ASSET_LAYER_GROUPS.filter(
+            (group) => BACKGROUND_ASSET_GROUP_IDS.has(group.id)
+        ),
+        ...ASSET_LAYER_GROUPS.filter(
+            (group) => !BACKGROUND_ASSET_GROUP_IDS.has(group.id)
+        )
+    ];
 }
 
 function getAssetGroup(groupId) {

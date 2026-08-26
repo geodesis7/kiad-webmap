@@ -332,6 +332,13 @@ map.on("load", () => {
                 return;
             }
 
+            if (
+                typeof isDsmPointAtPoint === "function" &&
+                isDsmPointAtPoint(event.point)
+            ) {
+                return;
+            }
+
             const feature = event.features?.[0];
 
             if (!feature) {

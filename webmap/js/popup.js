@@ -45,6 +45,103 @@ function openAssetPopup(mapInstance, properties, lngLat) {
     return popup;
 }
 
+function openDsmPopup(mapInstance, properties, lngLat) {
+    if (typeof clearPendingAssetPopup === "function") {
+        clearPendingAssetPopup();
+    }
+
+    activeAssetPopup?.remove();
+
+    const popup = new maplibregl.Popup({
+        closeButton: true,
+        closeOnClick: true,
+        maxWidth: "360px",
+        offset: 12
+    })
+        .setLngLat(lngLat)
+        .setHTML(createDsmPopupHtml(properties))
+        .addTo(mapInstance);
+
+    activeAssetPopup = popup;
+
+    popup.on("close", () => {
+        if (activeAssetPopup === popup) {
+            activeAssetPopup = null;
+        }
+    });
+
+    window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => {
+            ensurePopupVisible(mapInstance, popup);
+        });
+    });
+
+    return popup;
+}
+
+function createDsmPopupHtml(properties = {}) {
+    const dsmCode = getFirstValue(properties.column_name, properties.column_id) ?? "DSM";
+    const rows = [
+        createPopupRow("DSM Kodu", properties.column_name),
+        createPopupRow("Kesim", properties.section_code),
+        createPopupRow("İmalat Tarihi", formatPopupDate(properties.production_date)),
+        createPopupRow("Vardiya", properties.shift_type),
+        createPopupRow("Makine", properties.machine_code),
+        createPopupRow("Proje Boyu", formatMetricValue(properties.design_length_m, "m")),
+        createPopupRow("İmal Edilen Boy", formatMetricValue(properties.constructed_length_m, "m")),
+        createPopupRow("Çimento Sarfiyatı", formatMetricValue(properties.cement_consumption_kg_m, "kg/m")),
+        createPopupRow("Dozaj", formatMetricValue(properties.dosage_kg_m3, "kg/m³")),
+        createPopupRow("Easting", formatCoordinate(properties.easting)),
+        createPopupRow("Northing", formatCoordinate(properties.northing)),
+        createPopupRow("Açıklama", properties.notes)
+    ].filter(Boolean).join("");
+
+    return `
+        <article class="asset-popup dsm-popup">
+            <header class="asset-popup-header">
+                <div class="asset-popup-heading">
+                    <span class="asset-popup-eyebrow">DSM</span>
+                    <h3 class="popup-title">${escapeHtml(String(dsmCode))}</h3>
+                </div>
+            </header>
+            <div class="asset-popup-body">
+                ${rows || createEmptyPopupMessage()}
+            </div>
+        </article>
+    `;
+}
+
+function formatPopupDate(value) {
+    if (value === null || value === undefined || value === "") {
+        return null;
+    }
+
+    const date = new Date(String(value));
+
+    return Number.isNaN(date.getTime())
+        ? String(value)
+        : date.toLocaleDateString("tr-TR");
+}
+
+function formatMetricValue(value, unit) {
+    const number = toFiniteNumber(value);
+
+    return number === null
+        ? null
+        : `${number.toLocaleString("tr-TR", { maximumFractionDigits: 2 })} ${unit}`;
+}
+
+function formatCoordinate(value) {
+    const number = toFiniteNumber(value);
+
+    return number === null
+        ? null
+        : number.toLocaleString("tr-TR", {
+            minimumFractionDigits: 3,
+            maximumFractionDigits: 3
+        });
+}
+
 /**
  * Popup taşan kenarlar kadar haritayı kaydırarak tüm içeriği görünür tutar.
  *
