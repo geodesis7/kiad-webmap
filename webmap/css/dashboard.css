@@ -23,11 +23,11 @@
     --dashboard-stage-lower: #4f839f;
     --dashboard-stage-invert: #c28a31;
     --dashboard-stage-track: #e4eaf0;
-    --viaduct-concrete-completed: #27966a;
-    --viaduct-concrete-progress: #d99a2b;
-    --viaduct-concrete-waiting: #8795a5;
-    --viaduct-concrete-unknown: #c5cdd6;
-    --viaduct-precast-coverage: #387b9f;
+    --viaduct-concrete-completed: var(--color-completed);
+    --viaduct-concrete-progress: var(--color-in-progress);
+    --viaduct-concrete-waiting: var(--color-not-started);
+    --viaduct-concrete-unknown: var(--color-unknown);
+    --viaduct-precast-coverage: var(--color-progress-secondary);
 
     position: absolute;
     z-index: 12;
@@ -101,7 +101,7 @@
 
 .dashboard-header h2 {
     margin-top: 4px;
-    font-size: 24px;
+    font-size: var(--font-dashboard-title);
 }
 
 .dashboard-header p {
@@ -179,6 +179,10 @@
     font-size: 11px;
     font-weight: 800;
     cursor: pointer;
+    transition:
+        color var(--transition-fast),
+        border-color var(--transition-fast),
+        background var(--transition-fast);
 }
 
 .dashboard-navigation-tab:hover,
@@ -208,17 +212,17 @@
 
 .dashboard-project-kpis .dashboard-kpi span,
 .dashboard-viaduct-kpis .dashboard-kpi span {
-    font-size: 10px;
+    font-size: var(--font-meta);
 }
 
 .dashboard-project-kpis .dashboard-kpi strong,
 .dashboard-viaduct-kpis .dashboard-kpi strong {
-    font-size: 22px;
+    font-size: var(--font-kpi-value);
 }
 
 .dashboard-project-kpis .dashboard-kpi small,
 .dashboard-viaduct-kpis .dashboard-kpi small {
-    font-size: 9px;
+    font-size: var(--font-meta);
 }
 
 .dashboard-viaduct-kpis {
@@ -227,9 +231,12 @@
 
 .dashboard-kpi {
     min-width: 0;
-    padding: 13px;
+    min-height: 88px;
+    display: flex;
+    flex-direction: column;
+    padding: 13px 14px;
     border: 1px solid var(--color-border);
-    border-radius: 11px;
+    border-radius: var(--radius-card);
     background: var(--color-surface);
     box-shadow: var(--shadow-small);
 }
@@ -241,7 +248,7 @@
 }
 
 .dashboard-kpi span {
-    font-size: 9px;
+    font-size: var(--font-meta);
     font-weight: 750;
 }
 
@@ -250,13 +257,15 @@
     margin-top: 7px;
     overflow-wrap: anywhere;
     color: var(--color-primary-900);
-    font-size: 19px;
+    font-size: var(--font-kpi-value);
     line-height: 1.05;
 }
 
 .dashboard-kpi small {
-    margin-top: 5px;
-    font-size: 8px;
+    margin-top: auto;
+    padding-top: 5px;
+    font-size: var(--font-meta);
+    line-height: 1.25;
 }
 
 .dashboard-grid {
@@ -268,9 +277,9 @@
 
 .dashboard-card {
     min-width: 0;
-    padding: 15px;
+    padding: var(--space-card);
     border: 1px solid var(--color-border);
-    border-radius: 13px;
+    border-radius: var(--radius-card);
     background: var(--color-surface);
     box-shadow: var(--shadow-small);
 }
@@ -285,9 +294,9 @@
 .dashboard-summary-card {
     width: 100%;
     min-width: 0;
-    padding: 16px;
+    padding: var(--space-card);
     border: 1px solid var(--color-border);
-    border-radius: 13px;
+    border-radius: var(--radius-card);
     color: var(--color-text);
     background: var(--color-surface);
     box-shadow: var(--shadow-small);
@@ -314,7 +323,7 @@
 
 .dashboard-summary-card .dashboard-card-heading h3,
 .dashboard-project-panel .dashboard-card-heading h3 {
-    font-size: 16px;
+    font-size: var(--font-card-title);
 }
 
 .dashboard-summary-metrics,
@@ -343,7 +352,7 @@
 .dashboard-summary-metrics dt,
 .dashboard-panel-rows dt {
     color: var(--color-text-muted);
-    font-size: 10px;
+    font-size: var(--font-meta);
 }
 
 .dashboard-summary-metrics dd,
@@ -351,9 +360,31 @@
     margin: 0;
     overflow-wrap: anywhere;
     color: var(--color-primary-900);
-    font-size: 12px;
+    font-size: var(--font-body);
     font-weight: 800;
     text-align: right;
+}
+
+.dashboard-summary-metrics .dashboard-summary-progress {
+    grid-column: 1 / -1;
+    align-items: center;
+}
+
+.dashboard-summary-progress dt small {
+    display: block;
+    max-width: 150px;
+    margin-top: 3px;
+    color: var(--color-text-muted);
+    font-size: var(--font-meta);
+    font-weight: 500;
+    line-height: 1.25;
+}
+
+.dashboard-summary-progress dd {
+    flex: 0 0 auto;
+    color: var(--color-progress-primary);
+    font-size: 18px;
+    line-height: 1;
 }
 
 .dashboard-project-panels {
@@ -472,7 +503,7 @@
     display: block;
     margin-bottom: 4px;
     color: var(--color-text-muted);
-    font-size: 10px;
+    font-size: var(--font-meta);
     font-weight: 800;
     letter-spacing: 0.07em;
     text-transform: uppercase;
@@ -481,13 +512,13 @@
 .dashboard-production-heading h4 {
     margin: 0;
     color: var(--color-primary-900);
-    font-size: 15px;
+    font-size: var(--font-card-title);
 }
 
 .dashboard-production-heading > strong,
 .dashboard-production-heading.is-compact strong {
-    color: var(--color-success);
-    font-size: 17px;
+    color: var(--color-progress-primary);
+    font-size: var(--font-kpi-value);
     font-weight: 800;
 }
 
@@ -510,11 +541,22 @@
 }
 
 .dashboard-viaduct-track {
-    height: 12px;
+    height: 11px;
 }
 
 .dashboard-viaduct-production.is-precast .dashboard-viaduct-track span {
     background: var(--viaduct-precast-coverage);
+}
+
+.dashboard-concrete-summary {
+    margin-bottom: 8px;
+    color: var(--color-text-muted);
+    font-size: 11px;
+}
+
+.dashboard-concrete-summary strong {
+    color: var(--color-primary-900);
+    font-size: 12px;
 }
 
 .dashboard-segmented-bar {
@@ -617,15 +659,15 @@
 .dashboard-viaduct-empty-badge {
     display: inline-block;
     margin-top: 10px;
-    padding: 5px 8px;
+    padding: 5px 9px;
     border-radius: 999px;
-    font-size: 8px;
+    font-size: var(--font-meta);
     font-weight: 800;
 }
 
 .dashboard-quality-badge {
     color: #81550d;
-    background: #fff1d3;
+    background: var(--color-warning-soft);
 }
 
 .dashboard-viaduct-header-meta .dashboard-quality-badge {
@@ -670,7 +712,7 @@
 .dashboard-card-heading h3 {
     margin: 3px 0 0;
     color: var(--color-primary-900);
-    font-size: 14px;
+    font-size: var(--font-section-title);
 }
 
 .dashboard-card-heading > strong {

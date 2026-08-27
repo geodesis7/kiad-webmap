@@ -54,6 +54,10 @@ function addDsmLayers(mapInstance) {
         }
     });
 
+    const labelBeforeLayerId = mapInstance.getLayer("stations-labels")
+        ? "stations-labels"
+        : undefined;
+
     mapInstance.addLayer({
         id: DSM_LABEL_LAYER_ID,
         type: "symbol",
@@ -73,7 +77,7 @@ function addDsmLayers(mapInstance) {
             "text-halo-color": style.label.haloColor,
             "text-halo-width": style.label.haloWidth
         }
-    });
+    }, labelBeforeLayerId);
 }
 
 function setDsmVisibility(mapInstance, isVisible) {
@@ -136,7 +140,7 @@ function focusDsmSection(mapInstance, bbox) {
                 bottom: 70,
                 left: 80
             },
-            duration: 900,
+            duration: 700,
             maxZoom: 17
         }
     );

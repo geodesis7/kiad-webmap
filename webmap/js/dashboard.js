@@ -273,6 +273,7 @@ function renderProjectDashboard(tunnelData = {}, viaductData = {}) {
 
     const tunnelSummary = tunnelData.summary ?? {};
     const viaductSummary = viaductData.summary ?? {};
+    const viaducts = Array.isArray(viaductData.viaducts) ? viaductData.viaducts : [];
     const latestDataDate = getLatestDashboardDate(
         tunnelSummary.latest_record_date,
         viaductSummary.latest_activity_date,
@@ -287,7 +288,7 @@ function renderProjectDashboard(tunnelData = {}, viaductData = {}) {
 
             <div class="dashboard-project-summaries">
                 ${createProjectTunnelSummary(tunnelSummary)}
-                ${createProjectViaductSummary(viaductSummary)}
+                ${createProjectViaductSummary(viaductSummary, viaducts)}
             </div>
 
             <div class="dashboard-project-panels">
@@ -304,7 +305,7 @@ function renderProjectDashboard(tunnelData = {}, viaductData = {}) {
 
 function createProjectDashboardKpis(tunnelSummary, viaductSummary, latestDataDate) {
     const kpis = [
-        ["Toplam Asset", formatDashboardNumber(dashboardAssetCount), "mevcut proje varlıkları"],
+        ["Toplam Varlık", formatDashboardNumber(dashboardAssetCount), "mevcut proje varlıkları"],
         ["Operasyonel Tünel", formatDashboardNumber(tunnelSummary.active_tunnel_count), "veri bulunan"],
         ["Operasyonel Viyadük", formatDashboardNumber(viaductSummary.data_ready_viaduct_count), "veri hazır"],
         ["Aktif Tünel Aynası", formatDashboardNumber(tunnelSummary.active_face_count), "aktif operasyon"],
@@ -339,6 +340,11 @@ function createProjectTunnelSummary(summary = {}) {
                 ${createDashboardMetric("Toplam Tünel", formatDashboardNumber(summary.total_tunnel_count))}
                 ${createDashboardMetric("Operasyonel Tünel", formatDashboardNumber(summary.active_tunnel_count))}
                 ${createDashboardMetric("Aktif Ayna", formatDashboardNumber(summary.active_face_count))}
+                ${createDashboardProgressMetric(
+                    "Kazı İlerlemesi",
+                    formatDashboardPrecisePercent(summary.overall_progress_percent),
+                    "toplam tünel uzunluğuna oranlı"
+                )}
                 ${createDashboardMetric("Son 7 Gün", formatDashboardLength(summary.last_7_days_progress))}
                 ${createDashboardMetric("En Son Aktivite", formatDashboardDate(summary.latest_record_date))}
             </dl>
@@ -346,7 +352,10 @@ function createProjectTunnelSummary(summary = {}) {
     `;
 }
 
-function createProjectViaductSummary(summary = {}) {
+function createProjectViaductSummary(summary = {}, viaducts = []) {
+    const concrete = aggregateDashboardConcreteProgress(viaducts);
+    const precast = aggregateDashboardPrecastCoverage(viaducts);
+
     return `
         <button class="dashboard-summary-card" type="button" data-project-summary-view="viaducts">
             <div class="dashboard-card-heading">
@@ -359,14 +368,66 @@ function createProjectViaductSummary(summary = {}) {
             <dl class="dashboard-summary-metrics">
                 ${createDashboardMetric("Toplam / Operasyonel", `${formatDashboardNumber(summary.total_viaduct_count)} / ${formatDashboardNumber(summary.data_ready_viaduct_count)}`)}
                 ${createDashboardMetric("Toplam Yapı", formatDashboardNumber(summary.structure_count))}
-                ${createDashboardMetric("Kazık", `${formatDashboardNumber(summary.completed_pile_count)} / ${formatDashboardNumber(summary.planned_pile_count)}`)}
-                ${createDashboardMetric("Kazık Adet İlerlemesi", formatDashboardPrecisePercent(summary.pile_count_progress_percent))}
-                ${createDashboardMetric("Kiriş Kaydı", formatDashboardNumber(summary.girder_record_count))}
+                ${createDashboardProgressMetric(
+                    "Kazık İlerlemesi",
+                    formatDashboardPrecisePercent(summary.pile_count_progress_percent),
+                    `${formatDashboardNumber(summary.completed_pile_count)} / ${formatDashboardNumber(summary.planned_pile_count)} kazık`
+                )}
+                ${createDashboardProgressMetric(
+                    "Betonarme İlerlemesi",
+                    formatDashboardPrecisePercent(concrete.percent),
+                    `Kayıt bazlı · ${formatDashboardNumber(concrete.completed)} / ${formatDashboardNumber(concrete.total)}`
+                )}
+                ${createDashboardProgressMetric(
+                    "Prekast İlerlemesi",
+                    formatDashboardPrecisePercent(precast.percent),
+                    `Üretim kaydı kapsamı · ${formatDashboardNumber(precast.knownCount)} / ${formatDashboardNumber(precast.recordCount)}`
+                )}
                 ${createDashboardMetric("En Son Aktivite", formatDashboardDate(summary.latest_activity_date))}
-                ${createDashboardMetric("Kalite Uyarısı", formatDashboardNumber(summary.quality_warning_count))}
             </dl>
         </button>
     `;
+}
+
+function createDashboardProgressMetric(label, value, note) {
+    return `
+        <div class="dashboard-summary-progress">
+            <dt>${escapeDashboardHtml(label)}<small>${escapeDashboardHtml(note)}</small></dt>
+            <dd>${escapeDashboardHtml(value)}</dd>
+        </div>
+    `;
+}
+
+function aggregateDashboardConcreteProgress(viaducts = []) {
+    const totals = viaducts.reduce((result, viaduct) => {
+        const counts = getDashboardViaductConcreteCounts(viaduct);
+        if (!counts) return result;
+
+        result.completed += counts.completed;
+        result.total += counts.completed + counts.in_progress + counts.not_started + counts.unknown;
+        return result;
+    }, { completed: 0, total: 0 });
+
+    return {
+        ...totals,
+        percent: totals.total > 0 ? (totals.completed / totals.total) * 100 : null
+    };
+}
+
+function aggregateDashboardPrecastCoverage(viaducts = []) {
+    const totals = viaducts.reduce((result, viaduct) => {
+        const coverage = getDashboardViaductPrecastCoverage(viaduct);
+        if (!coverage) return result;
+
+        result.knownCount += coverage.knownCount;
+        result.recordCount += coverage.recordCount;
+        return result;
+    }, { knownCount: 0, recordCount: 0 });
+
+    return {
+        ...totals,
+        percent: totals.recordCount > 0 ? (totals.knownCount / totals.recordCount) * 100 : null
+    };
 }
 
 function createProjectActivityPanel(tunnelSummary, viaductSummary) {
@@ -516,6 +577,7 @@ function createDashboardViaductList(viaducts, portfolioSummary = {}) {
 
 function createDashboardViaductRow(viaduct = {}, soleOperationalSummary = null) {
     const concreteCounts = getDashboardViaductConcreteCounts(viaduct);
+    const concreteCompletion = getDashboardConcreteCompletion(concreteCounts);
     const precastCoverage = getDashboardViaductPrecastCoverage(viaduct);
     const completedPileCount = viaduct.completed_pile_count
         ?? soleOperationalSummary?.completed_pile_count;
@@ -561,9 +623,12 @@ function createDashboardViaductRow(viaduct = {}, soleOperationalSummary = null) 
                 <section class="dashboard-viaduct-production is-concrete">
                     <div class="dashboard-production-heading">
                         <div>
-                            <span>Raporlanan Statü Dağılımı</span>
-                            <h4>Betonarme Durumu</h4>
+                            <span>Kayıt bazlı tamamlanma oranı</span>
+                            <h4>Betonarme İlerlemesi</h4>
                         </div>
+                        ${concreteCompletion
+                            ? `<strong>${escapeDashboardHtml(formatDashboardPrecisePercent(concreteCompletion.percent))}</strong>`
+                            : ""}
                     </div>
                     ${concreteCounts
                         ? createDashboardConcreteDistribution(concreteCounts)
@@ -575,8 +640,8 @@ function createDashboardViaductRow(viaduct = {}, soleOperationalSummary = null) 
                 <section class="dashboard-viaduct-production is-precast">
                     <div class="dashboard-production-heading">
                         <div>
-                            <span>Veri Kapsamı</span>
-                            <h4>Prekast Üretim Kaydı</h4>
+                            <span>Üretim kaydı kapsamı</span>
+                            <h4>Prekast İlerlemesi</h4>
                         </div>
                     </div>
                     ${precastCoverage
@@ -588,6 +653,15 @@ function createDashboardViaductRow(viaduct = {}, soleOperationalSummary = null) 
             </div>
         </article>
     `;
+}
+
+function getDashboardConcreteCompletion(counts) {
+    if (!counts) return null;
+
+    const total = counts.completed + counts.in_progress + counts.not_started + counts.unknown;
+    return total > 0
+        ? { completed: counts.completed, total, percent: (counts.completed / total) * 100 }
+        : null;
 }
 
 function getDashboardViaductConcreteCounts(viaduct = {}) {
@@ -614,20 +688,25 @@ function createDashboardConcreteDistribution(counts) {
         ["unknown", "Bilinmiyor", counts.unknown]
     ];
     const total = statuses.reduce((sum, status) => sum + status[2], 0);
+    const visibleStatuses = statuses.filter((status) => status[2] > 0);
 
     if (total <= 0) {
         return createDashboardMetricUnavailable("Raporlanan betonarme statüsü bulunmuyor.");
     }
 
     return `
+        <div class="dashboard-concrete-summary">
+            <strong>${escapeDashboardHtml(formatDashboardNumber(counts.completed))} / ${escapeDashboardHtml(formatDashboardNumber(total))}</strong>
+            kayıt tamamlandı
+        </div>
         <div class="dashboard-segmented-bar" aria-label="Betonarme statü dağılımı">
-            ${statuses.map(([state, label, count]) => `
+            ${visibleStatuses.map(([state, label, count]) => `
                 <span class="is-${state}" style="width:${(count / total) * 100}%"
                     title="${escapeDashboardHtml(label)}: ${escapeDashboardHtml(formatDashboardNumber(count))}"></span>
             `).join("")}
         </div>
         <div class="dashboard-segment-legend">
-            ${statuses.map(([state, label, count]) => `
+            ${visibleStatuses.map(([state, label, count]) => `
                 <span class="is-${state}"><i></i>${escapeDashboardHtml(formatDashboardNumber(count))} ${escapeDashboardHtml(label)}</span>
             `).join("")}
         </div>

@@ -232,21 +232,57 @@ function createViaductGeneralView(data = {}) {
     const precast = data.precast ?? {};
     const quality = data.quality ?? {};
     const hasOperationalData = summary.has_operational_data !== false;
+    const concreteCounts = concrete.reported_status_counts ?? {};
+    const concreteTotal = toFiniteNumber(concrete.record_count);
+    const concreteCompleted = toFiniteNumber(concreteCounts.completed);
+    const concreteProgress = concreteTotal > 0 && concreteCompleted !== null
+        ? (concreteCompleted / concreteTotal) * 100
+        : null;
+    const girderCount = toFiniteNumber(precast.girder_record_count);
+    const productionDateKnownCount = toFiniteNumber(precast.production_date_known_count);
+    const precastCoverage = girderCount > 0 && productionDateKnownCount !== null
+        ? (productionDateKnownCount / girderCount) * 100
+        : null;
     const kpis = [
-        ["Toplam Yapı", formatViaductCount(summary.structure_count)],
-        ["Pier", formatViaductCount(summary.pier_count)],
-        ["Abutment", formatViaductCount(summary.abutment_count)],
-        ["Planlı Kazık", formatViaductCount(piles.planned_count)],
-        ["Tamamlanan Kazık", formatViaductCount(piles.completed_count)],
-        ["Kazık Adet İlerlemesi", formatViaductPercent(piles.count_progress_percent)],
-        ["Kazık Boy İlerlemesi", formatViaductPercent(piles.length_progress_percent)],
-        ["Kiriş Kaydı", formatViaductCount(precast.girder_record_count)],
-        ["Span Kaydı", formatViaductCount(precast.span_record_count)],
-        ["Son Aktivite", formatViaductDate(summary.latest_activity_date)]
+        ["Toplam Kazık", formatViaductCount(piles.planned_count), "planlı kazık"],
+        ["Betonarme Yapılar", `${formatViaductCount(concrete.record_count)} kayıt`, "imalat kaydı"],
+        ["Kiriş Adet", formatViaductCount(precast.girder_record_count), "prekast kiriş kaydı"]
     ];
 
     return `
-        ${createViaductQualityNotice(quality)}
+        ${hasOperationalData ? `
+            <section class="tunnel-detail-section">
+                <h3>Operasyon Özeti</h3>
+                <div class="tunnel-kpi-grid viaduct-kpi-grid">
+                    ${kpis.map(([label, value, note]) => createViaductKpi(label, value, note)).join("")}
+                </div>
+            </section>
+
+            <section class="tunnel-detail-section">
+                <h3>İlerleme Göstergeleri</h3>
+                <div class="viaduct-progress-list">
+                    ${createViaductProgress(
+                        "Kazık Adet İlerlemesi",
+                        `${formatViaductCount(piles.completed_count)} / ${formatViaductCount(piles.planned_count)} kazık`,
+                        piles.count_progress_percent,
+                        "Güvenilir adet ilerlemesi"
+                    )}
+                    ${createViaductProgress(
+                        "Betonarme İlerlemesi",
+                        `${formatViaductCount(concreteCompleted)} / ${formatViaductCount(concreteTotal)} kayıt tamamlandı`,
+                        concreteProgress,
+                        "Kayıt bazlı tamamlanma"
+                    )}
+                    ${createViaductProgress(
+                        "Kiriş Adet İlerlemesi",
+                        `${formatViaductCount(productionDateKnownCount)} / ${formatViaductCount(girderCount)} üretim tarihi kayıtlı`,
+                        precastCoverage,
+                        "Üretim kaydı kapsamı"
+                    )}
+                </div>
+            </section>
+        ` : createViaductOperationalEmpty()}
+
         <section class="tunnel-detail-section">
             <h3>Temel Bilgiler</h3>
             <dl class="tunnel-info-list">
@@ -258,35 +294,7 @@ function createViaductGeneralView(data = {}) {
             </dl>
         </section>
 
-        ${hasOperationalData ? `
-            <section class="tunnel-detail-section">
-                <h3>Operasyon Özeti</h3>
-                <div class="tunnel-kpi-grid viaduct-kpi-grid">
-                    ${kpis.map(([label, value]) => createViaductKpi(label, value)).join("")}
-                </div>
-            </section>
-
-            <section class="tunnel-detail-section">
-                <h3>Kazık İlerlemesi</h3>
-                <div class="viaduct-progress-list">
-                    ${createViaductProgress(
-                        "Kazık Adet İlerlemesi",
-                        `${formatViaductCount(piles.completed_count)} / ${formatViaductCount(piles.planned_count)}`,
-                        piles.count_progress_percent
-                    )}
-                    ${createViaductProgress(
-                        "Kazık Boy İlerlemesi",
-                        `${formatViaductMeters(piles.completed_length_m)} / ${formatViaductMeters(piles.planned_length_m)}`,
-                        piles.length_progress_percent
-                    )}
-                </div>
-            </section>
-
-            <section class="tunnel-detail-section">
-                <h3>Betonarme Durumu</h3>
-                ${createViaductStatusGrid(concrete.reported_status_counts)}
-            </section>
-        ` : createViaductOperationalEmpty()}
+        ${createViaductQualityNotice(quality)}
     `;
 }
 
@@ -306,11 +314,12 @@ function createViaductQualityNotice(quality = {}) {
     `;
 }
 
-function createViaductKpi(label, value) {
+function createViaductKpi(label, value, note = "") {
     return `
         <article class="tunnel-kpi-card">
             <span>${escapeViaductHtml(label)}</span>
             <strong>${escapeViaductHtml(value)}</strong>
+            ${note ? `<small>${escapeViaductHtml(note)}</small>` : ""}
         </article>
     `;
 }
@@ -324,7 +333,7 @@ function createViaductInfoRow(label, value) {
     `;
 }
 
-function createViaductProgress(label, ratioText, percent) {
+function createViaductProgress(label, ratioText, percent, note = "") {
     const value = toFiniteNumber(percent);
     const width = Math.min(100, Math.max(0, value ?? 0));
 
@@ -341,6 +350,7 @@ function createViaductProgress(label, ratioText, percent) {
                 aria-valuemin="0" aria-valuemax="100" aria-valuenow="${value ?? 0}">
                 <span style="width: ${width}%"></span>
             </div>
+            ${note ? `<small class="viaduct-progress-note">${escapeViaductHtml(note)}</small>` : ""}
         </div>
     `;
 }

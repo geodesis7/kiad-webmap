@@ -2,10 +2,10 @@
 @import url("./sidebar.css");
 @import url("./map-tools.css");
 @import url("./popup.css");
-@import url("./tunnel-detail.css");
-@import url("./viaduct-detail.css");
+@import url("./tunnel-detail.css?v=2");
+@import url("./viaduct-detail.css?v=3");
 @import url("./tunnel-charts.css");
-@import url("./dashboard.css?v=4");
+@import url("./dashboard.css?v=7");
 
 
 :root {
@@ -27,6 +27,25 @@
 
     --color-success: #22a06b;
     --color-danger: #c1121f;
+    --color-warning: #d99a2b;
+    --color-warning-soft: #fff4d8;
+    --color-completed: var(--color-success);
+    --color-in-progress: var(--color-warning);
+    --color-not-started: #8795a5;
+    --color-unknown: #c5cdd6;
+    --color-progress-primary: var(--color-success);
+    --color-progress-secondary: #387b9f;
+
+    --font-dashboard-title: 24px;
+    --font-section-title: 14px;
+    --font-kpi-value: 20px;
+    --font-card-title: 15px;
+    --font-body: 12px;
+    --font-meta: 10px;
+
+    --radius-card: 12px;
+    --radius-control: 8px;
+    --space-card: 16px;
 
     --header-height: 72px;
     --statusbar-height: 34px;
@@ -39,7 +58,7 @@
         0 10px 30px rgba(15, 35, 58, 0.15);
 
     --transition-fast: 180ms ease;
-    --transition-normal: 260ms ease;
+    --transition-normal: 220ms ease;
 }
 
 * {

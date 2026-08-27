@@ -106,8 +106,11 @@ const map = new maplibregl.Map({
         ]
     },
 
-    center: [44.009898, 40.169439],
-    zoom: 10
+    bounds: PROJECT_BOUNDS,
+    fitBoundsOptions: {
+        padding: getProjectPadding(),
+        duration: 0
+    }
 });
 
 map.addControl(
@@ -170,7 +173,7 @@ map.on("mouseout", () => {
 function focusProject(options = {}) {
     map.fitBounds(PROJECT_BOUNDS, {
         padding: getProjectPadding(),
-        duration: 900,
+        duration: 700,
         ...options
     });
 }
@@ -298,13 +301,6 @@ map.on("load", () => {
         });
     */
     addAssetLayers(map);
-
-    /*
-     * Haritayı assets tablosunun kapsadığı alana yaklaştırır.
-     */
-    focusProject({
-        duration: 1000
-    });
 
     /*
      * Tıklanabilir katmanlar.

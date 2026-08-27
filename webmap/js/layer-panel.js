@@ -849,7 +849,7 @@ function focusAsset(asset) {
                         bottom: 70,
                         left: 80
                     },
-                    duration: 900,
+                    duration: 700,
                     maxZoom: 16
                 }
             );
@@ -881,7 +881,7 @@ function focusAsset(asset) {
                 latitude
             ],
             zoom: 16,
-            duration: 900
+            duration: 700
         });
 
         return true;

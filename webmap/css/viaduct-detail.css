@@ -2,12 +2,23 @@
     z-index: 15;
 }
 
-.viaduct-detail-tabs .tunnel-detail-tab {
-    padding-inline: 10px;
+.viaduct-kpi-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
-.viaduct-kpi-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+.viaduct-kpi-grid .tunnel-kpi-card {
+    padding: 13px 11px;
+}
+
+.viaduct-kpi-grid .tunnel-kpi-card strong {
+    font-size: 17px;
+}
+
+.viaduct-kpi-grid .tunnel-kpi-card small {
+    display: block;
+    margin-top: 5px;
+    color: var(--color-text-muted);
+    font-size: 9px;
 }
 
 .viaduct-quality-notice {
@@ -18,9 +29,9 @@
     margin-bottom: 14px;
     padding: 13px 14px;
     border: 1px solid #f1d7a3;
-    border-radius: 11px;
+    border-radius: var(--radius-card);
     color: #75500f;
-    background: #fff8e8;
+    background: var(--color-warning-soft);
     box-shadow: var(--shadow-small);
 }
 
@@ -41,7 +52,7 @@
 
 .viaduct-quality-notice span,
 .viaduct-quality-notice time {
-    font-size: 9px;
+    font-size: var(--font-meta);
 }
 
 .viaduct-quality-notice time {
@@ -77,18 +88,26 @@
 
 .viaduct-progress-heading strong {
     color: var(--color-primary-900);
-    font-size: 11px;
+    font-size: var(--font-body);
 }
 
 .viaduct-progress-heading span {
     margin-top: 3px;
     color: var(--color-text-muted);
-    font-size: 10px;
+    font-size: var(--font-meta);
 }
 
 .viaduct-progress-heading b {
-    color: var(--color-success);
-    font-size: 13px;
+    color: var(--color-progress-primary);
+    font-size: 16px;
+}
+
+.viaduct-progress-note {
+    display: block;
+    margin-top: 6px;
+    color: var(--color-text-muted);
+    font-size: var(--font-meta);
+    font-weight: 650;
 }
 
 .viaduct-status-grid {
@@ -107,10 +126,10 @@
     text-align: center;
 }
 
-.viaduct-status-card.is-completed { border-top-color: var(--color-success); }
-.viaduct-status-card.is-progress { border-top-color: #d99a2b; }
-.viaduct-status-card.is-waiting { border-top-color: #718096; }
-.viaduct-status-card.is-unknown { border-top-color: #a8b1bc; }
+.viaduct-status-card.is-completed { border-top-color: var(--color-completed); }
+.viaduct-status-card.is-progress { border-top-color: var(--color-in-progress); }
+.viaduct-status-card.is-waiting { border-top-color: var(--color-not-started); }
+.viaduct-status-card.is-unknown { border-top-color: var(--color-unknown); }
 
 .viaduct-status-card span {
     display: block;
@@ -324,12 +343,16 @@
     padding: 5px 7px;
     border-radius: 999px;
     color: #8a5a0b;
-    background: #fff2d3;
-    font-size: 8px;
+    background: var(--color-warning-soft);
+    font-size: var(--font-meta);
     font-weight: 800;
 }
 
 @media (max-width: 420px) {
+    .viaduct-kpi-grid {
+        grid-template-columns: 1fr;
+    }
+
     .viaduct-status-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
@@ -339,4 +362,3 @@
         flex-direction: column;
     }
 }
-

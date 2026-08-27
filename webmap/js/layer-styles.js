@@ -390,20 +390,20 @@ const ASSET_STYLES = {
                 20, 8.74,
                 22, 34.96
             ],
-            opacity: 0.94,
+            opacity: 0.88,
             strokeColor: "#ffffff",
-            strokeWidth: 1
+            strokeWidth: 0.9
         },
 
         label: {
             field: "column_name",
             minZoom: 18,
-            size: 11,
-            offset: [0, 1],
+            size: 10,
+            offset: [0, 1.05],
             anchor: "top",
             color: "#164e63",
             haloColor: "rgba(255, 255, 255, 0.94)",
-            haloWidth: 1.5,
+            haloWidth: 1.1,
             allowOverlap: false
         }
     },
@@ -425,8 +425,8 @@ const ASSET_STYLES = {
         },
 
         line: {
-            width: 2,
-            opacity: 0.88,
+            width: 1.5,
+            opacity: 0.72,
             cap: "round",
             join: "round"
         },
@@ -457,8 +457,8 @@ const ASSET_STYLES = {
         },
 
         line: {
-            width: 2,
-            opacity: 0.88,
+            width: 1.5,
+            opacity: 0.72,
             cap: "round",
             join: "round"
         },

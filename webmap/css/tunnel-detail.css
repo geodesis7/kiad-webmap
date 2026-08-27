@@ -34,6 +34,7 @@
     justify-content: space-between;
     gap: 16px;
 
+    min-height: 104px;
     padding: 20px;
     color: #ffffff;
     background: linear-gradient(135deg, var(--color-primary-950), var(--color-primary-800));
@@ -56,7 +57,7 @@
 .tunnel-detail-heading h2 {
     margin: 0;
     overflow-wrap: anywhere;
-    font-size: 20px;
+    font-size: var(--font-kpi-value);
     line-height: 1.25;
 }
 
@@ -66,9 +67,9 @@
     padding: 5px 9px;
     border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: 999px;
-    color: #dff8ec;
-    background: rgba(34, 160, 107, 0.2);
-    font-size: 10px;
+    color: #edf5fc;
+    background: rgba(255, 255, 255, 0.1);
+    font-size: var(--font-meta);
     font-weight: 800;
 }
 
@@ -86,10 +87,15 @@
     font-size: 22px;
     line-height: 1;
     cursor: pointer;
+    transition:
+        border-color var(--transition-fast),
+        background var(--transition-fast),
+        transform var(--transition-fast);
 }
 
 .tunnel-detail-close:hover {
     background: rgba(255, 255, 255, 0.16);
+    transform: translateY(-1px);
 }
 
 .tunnel-detail-scroll {
@@ -105,7 +111,7 @@
     margin-bottom: 14px;
     padding: 4px;
     border: 1px solid var(--color-border);
-    border-radius: 8px;
+    border-radius: var(--radius-control);
     background: var(--color-surface);
     overflow-x: auto;
     scrollbar-width: thin;
@@ -119,12 +125,17 @@
     gap: 7px;
     padding: 8px 12px;
     border: 0;
-    border-radius: 6px;
+    min-height: 36px;
+    border-radius: calc(var(--radius-control) - 2px);
     color: var(--color-text-muted);
     background: transparent;
-    font-size: 12px;
+    font-size: var(--font-body);
     font-weight: 800;
     cursor: pointer;
+    transition:
+        color var(--transition-fast),
+        background var(--transition-fast),
+        box-shadow var(--transition-fast);
 }
 
 .tunnel-detail-tab:hover {
@@ -135,6 +146,7 @@
 .tunnel-detail-tab.is-active {
     color: #ffffff;
     background: var(--color-primary-800);
+    box-shadow: 0 2px 6px rgba(15, 35, 58, 0.16);
 }
 
 .tunnel-detail-tab span {
@@ -152,9 +164,9 @@
 
 .tunnel-detail-section {
     margin-bottom: 14px;
-    padding: 16px;
+    padding: var(--space-card);
     border: 1px solid var(--color-border);
-    border-radius: 12px;
+    border-radius: var(--radius-card);
     background: var(--color-surface);
     box-shadow: var(--shadow-small);
 }
@@ -162,7 +174,7 @@
 .tunnel-detail-section h3 {
     margin: 0 0 14px;
     color: var(--color-primary-900);
-    font-size: 13px;
+    font-size: var(--font-section-title);
 }
 
 .tunnel-kpi-grid {
@@ -173,9 +185,10 @@
 
 .tunnel-kpi-card {
     min-width: 0;
-    padding: 12px;
+    min-height: 82px;
+    padding: 13px;
     border: 1px solid #e9edf2;
-    border-radius: 9px;
+    border-radius: calc(var(--radius-card) - 2px);
     background: var(--color-surface-soft);
 }
 
@@ -183,14 +196,14 @@
     display: block;
     margin-bottom: 7px;
     color: var(--color-text-muted);
-    font-size: 10px;
+    font-size: var(--font-meta);
 }
 
 .tunnel-kpi-card strong {
     display: block;
     overflow-wrap: anywhere;
     color: var(--color-primary-900);
-    font-size: 15px;
+    font-size: 17px;
 }
 
 .tunnel-section-heading {
@@ -206,12 +219,12 @@
 }
 
 .tunnel-section-heading strong {
-    color: var(--color-success);
-    font-size: 14px;
+    color: var(--color-progress-primary);
+    font-size: 16px;
 }
 
 .tunnel-progress-track {
-    height: 10px;
+    height: 11px;
     overflow: hidden;
     border-radius: 999px;
     background: #e8edf2;
@@ -221,8 +234,14 @@
     height: 100%;
     display: block;
     border-radius: inherit;
-    background: linear-gradient(90deg, var(--color-success), #52bd8b);
-    transition: width var(--transition-normal);
+    background: linear-gradient(90deg, var(--color-progress-primary), #52bd8b);
+    transition:
+        width var(--transition-normal),
+        filter var(--transition-fast);
+}
+
+.tunnel-progress-track:hover span {
+    filter: saturate(1.08) brightness(1.02);
 }
 
 .tunnel-info-list {

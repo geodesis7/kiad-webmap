@@ -190,7 +190,7 @@ function focusTunnelFace(face) {
     map.flyTo({
         center: [longitude, latitude],
         zoom: Math.max(map.getZoom(), 16),
-        duration: 850,
+        duration: 650,
         essential: true
     });
 
