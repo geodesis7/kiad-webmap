@@ -9,7 +9,7 @@ const BASEMAP_LAYER_IDS = [
     "basemap-osm",
     "basemap-satellite",
     "basemap-terrain",
-    "basemap-light"
+    "basemap-esri-light"
 ];
 
 const map = new maplibregl.Map({
@@ -54,16 +54,14 @@ const map = new maplibregl.Map({
 
             },
 
-            "basemap-light-source": {
+            "basemap-esri-light-source": {
                 type: "raster",
                 tiles: [
-                    "https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
-                    "https://b.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
-                    "https://c.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png"
+                    "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}"
                 ],
                 tileSize: 256,
                 attribution:
-                    "&copy; OpenStreetMap contributors &copy; CARTO"
+                    "&copy; Esri, HERE, Garmin, OpenStreetMap contributors, and the GIS user community"
             }
         },
 
@@ -96,9 +94,9 @@ const map = new maplibregl.Map({
             },
 
             {
-                id: "basemap-light",
+                id: "basemap-esri-light",
                 type: "raster",
-                source: "basemap-light-source",
+                source: "basemap-esri-light-source",
                 layout: {
                     visibility: "none"
                 }

@@ -10,6 +10,8 @@
 
     <title>KIAD WebGIS</title>
 
+    <link rel="icon" href="./assets/logo/favicon.svg" type="image/svg+xml">
+
     <link href="https://unpkg.com/maplibre-gl@5.6.2/dist/maplibre-gl.css" rel="stylesheet">
 
     <link rel="stylesheet" href="./css/styles.css?v=13">
@@ -189,17 +191,6 @@
                                 Altlık Harita
                             </span>
 
-                            <button class="basemap-option" type="button" data-basemap="osm">
-                                <span class="basemap-preview basemap-preview-osm"></span>
-
-                                <span class="basemap-option-text">
-                                    <strong>Standart</strong>
-                                    <small>OpenStreetMap</small>
-                                </span>
-
-                                <span class="basemap-check">✓</span>
-                            </button>
-
                             <button class="basemap-option is-active" type="button" data-basemap="satellite">
                                 <span class="basemap-preview basemap-preview-satellite"></span>
 
@@ -222,12 +213,23 @@
                                 <span class="basemap-check">✓</span>
                             </button>
 
-                            <button class="basemap-option" type="button" data-basemap="light">
+                            <button class="basemap-option" type="button" data-basemap="esri-light">
                                 <span class="basemap-preview basemap-preview-light"></span>
 
                                 <span class="basemap-option-text">
-                                    <strong>Açık Ton</strong>
-                                    <small>Sade harita</small>
+                                    <strong>Esri Light</strong>
+                                    <small>World Light Gray</small>
+                                </span>
+
+                                <span class="basemap-check">✓</span>
+                            </button>
+
+                            <button class="basemap-option" type="button" data-basemap="osm">
+                                <span class="basemap-preview basemap-preview-osm"></span>
+
+                                <span class="basemap-option-text">
+                                    <strong>OpenStreetMap</strong>
+                                    <small>Standart harita</small>
                                 </span>
 
                                 <span class="basemap-check">✓</span>
@@ -312,7 +314,7 @@
     <script src="./js/popup.js"></script>
     <script src="./js/layer-styles.js?v=7"></script>
     <script src="./js/layers.js?v=2"></script>
-    <script src="./js/map.js?v=2"></script>
+    <script src="./js/map.js?v=3"></script>
     <script src="./js/dsm.js?v=3"></script>
     <script src="./js/alignment-km.js?v=3"></script>
     <script src="./js/layer-panel.js?v=3"></script>
