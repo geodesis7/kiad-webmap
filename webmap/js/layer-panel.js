@@ -9,11 +9,7 @@ const layerGroupCount =
 
 
 const API_BASE_URL =
-    ["localhost", "127.0.0.1"].includes(
-        window.location.hostname
-    )
-        ? "http://127.0.0.1:8000"
-        : "";
+    window.KIAD_API_BASE_URL ?? "";
 
 
 const assetsById = new Map();
@@ -28,8 +24,8 @@ async function loadLayerPanel() {
 
     try {
         const [assetResponse, dsmSectionResponse] = await Promise.all([
-            fetch(`${API_BASE_URL}/api/assets`),
-            fetch(`${API_BASE_URL}/api/dsm/sections`)
+            apiFetch(`${API_BASE_URL}/api/assets`),
+            apiFetch(`${API_BASE_URL}/api/dsm/sections`)
         ]);
 
         if (!assetResponse.ok || !dsmSectionResponse.ok) {
@@ -46,6 +42,10 @@ async function loadLayerPanel() {
         renderLayerTree(assets, dsmSections);
 
     } catch (error) {
+        if (isAuthSessionError(error)) {
+            return;
+        }
+
         console.error(
             "Katman paneli yüklenemedi:",
             error

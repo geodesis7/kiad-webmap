@@ -86,7 +86,7 @@ async function loadTunnelCharts(assetId, period = tunnelChartsPeriod) {
     tunnelChartsRequestController = new AbortController();
 
     try {
-        const response = await fetch(
+        const response = await apiFetch(
             `${API_BASE_URL}/api/tunnels/${encodeURIComponent(normalizedAssetId)}/progress?days=${encodeURIComponent(days)}`,
             {
                 signal: tunnelChartsRequestController.signal
@@ -114,6 +114,10 @@ async function loadTunnelCharts(assetId, period = tunnelChartsPeriod) {
 
         renderTunnelCharts(data, normalizedPeriod);
     } catch (error) {
+        if (isAuthSessionError(error)) {
+            return;
+        }
+
         if (error.name === "AbortError") {
             return;
         }

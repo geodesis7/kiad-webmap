@@ -55,13 +55,13 @@ async function openTunnelDashboard(force = false) {
 
     try {
         const [tunnelResponse, progressSummaryResponse, viaductResponse] = await Promise.all([
-            fetch(`${API_BASE_URL}/api/dashboard/tunnels`, {
+            apiFetch(`${API_BASE_URL}/api/dashboard/tunnels`, {
                 signal: dashboardRequestController.signal
             }),
-            fetch(`${API_BASE_URL}/api/tunnels/progress-summary`, {
+            apiFetch(`${API_BASE_URL}/api/tunnels/progress-summary`, {
                 signal: dashboardRequestController.signal
             }),
-            fetch(`${API_BASE_URL}/api/dashboard/viaducts`, {
+            apiFetch(`${API_BASE_URL}/api/dashboard/viaducts`, {
                 signal: dashboardRequestController.signal
             })
         ]);
@@ -84,6 +84,10 @@ async function openTunnelDashboard(force = false) {
             renderActiveDashboard();
         }
     } catch (error) {
+        if (isAuthSessionError(error)) {
+            return;
+        }
+
         if (error.name === "AbortError") {
             return;
         }

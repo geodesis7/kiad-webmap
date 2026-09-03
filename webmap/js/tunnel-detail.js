@@ -81,7 +81,7 @@ async function loadTunnelDetail(assetId, options = {}) {
     tunnelDetailRequestController = new AbortController();
 
     try {
-        const response = await fetch(
+        const response = await apiFetch(
             `${API_BASE_URL}/api/tunnels/${encodeURIComponent(normalizedAssetId)}/summary`,
             {
                 signal: tunnelDetailRequestController.signal
@@ -101,6 +101,10 @@ async function loadTunnelDetail(assetId, options = {}) {
         tunnelDetailCache.set(normalizedAssetId, tunnel);
         renderTunnelDetail(tunnel);
     } catch (error) {
+        if (isAuthSessionError(error)) {
+            return;
+        }
+
         if (error.name === "AbortError") {
             return;
         }
@@ -461,7 +465,7 @@ async function loadTunnelStages(assetId, force = false) {
     renderTunnelStagesLoading();
 
     try {
-        const response = await fetch(
+        const response = await apiFetch(
             `${API_BASE_URL}/api/tunnels/${encodeURIComponent(normalizedAssetId)}/stages`,
             {
                 signal: tunnelStagesRequestController.signal
@@ -484,6 +488,10 @@ async function loadTunnelStages(assetId, force = false) {
         };
         renderTunnelStages(stageData);
     } catch (error) {
+        if (isAuthSessionError(error)) {
+            return;
+        }
+
         if (error.name === "AbortError") {
             return;
         }
@@ -731,7 +739,7 @@ async function loadTunnelProgress(assetId, days = 30, force = false) {
     renderTunnelHistoryLoading();
 
     try {
-        const response = await fetch(
+        const response = await apiFetch(
             `${API_BASE_URL}/api/tunnels/${encodeURIComponent(normalizedAssetId)}/progress?days=${encodeURIComponent(days)}`,
             {
                 signal: tunnelProgressRequestController.signal
@@ -751,6 +759,10 @@ async function loadTunnelProgress(assetId, days = 30, force = false) {
         cacheTunnelProgressData(history);
         renderTunnelHistory(history);
     } catch (error) {
+        if (isAuthSessionError(error)) {
+            return;
+        }
+
         if (error.name === "AbortError") {
             return;
         }

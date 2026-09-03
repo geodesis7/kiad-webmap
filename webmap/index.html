@@ -14,12 +14,48 @@
 
     <link href="https://unpkg.com/maplibre-gl@5.6.2/dist/maplibre-gl.css" rel="stylesheet">
 
-    <link rel="stylesheet" href="./css/styles.css?v=14">
+    <link rel="stylesheet" href="./css/styles.css?v=15">
 </head>
 
 <body>
 
-    <div class="app-shell">
+    <div id="auth-screen" class="auth-screen" aria-labelledby="auth-title" aria-hidden="false">
+        <section class="auth-card">
+            <header class="auth-card-header">
+                <span class="auth-brand-mark" aria-hidden="true">K</span>
+                <div>
+                    <h1 id="auth-title">KIAD WebGIS</h1>
+                    <p>Kars–Iğdır–Aralık–Dilucu Demiryolu Projesi</p>
+                </div>
+            </header>
+            <div class="auth-card-body">
+                <div class="auth-intro">
+                    <h2>Güvenli Giriş</h2>
+                    <p>Proje haritasına erişmek için kullanıcı bilgilerinizle giriş yapın.</p>
+                </div>
+                <div id="auth-loading" class="auth-loading" role="status">
+                    <span class="auth-spinner" aria-hidden="true"></span>
+                    <span id="auth-loading-message">Oturum kontrol ediliyor...</span>
+                </div>
+                <form id="auth-form" class="auth-form" hidden>
+                    <p id="auth-message" class="auth-message" role="alert" hidden></p>
+                    <div class="auth-field">
+                        <label for="auth-username">Kullanıcı adı</label>
+                        <input id="auth-username" name="username" type="text" required
+                            maxlength="64" autocomplete="username" autocapitalize="none" spellcheck="false">
+                    </div>
+                    <div class="auth-field">
+                        <label for="auth-password">Parola</label>
+                        <input id="auth-password" name="password" type="password" required
+                            autocomplete="current-password">
+                    </div>
+                    <button id="auth-submit" class="auth-submit" type="submit">Giriş Yap</button>
+                </form>
+            </div>
+        </section>
+    </div>
+
+    <div class="app-shell" hidden aria-hidden="true">
 
         <header class="app-header">
 
@@ -59,14 +95,17 @@
                     <span>Sistem aktif</span>
                 </div>
 
-                <button class="user-button" type="button" aria-label="Kullanıcı menüsü">
-                    <span class="user-avatar">AG</span>
+                <div class="user-session" aria-label="Aktif kullanıcı">
+                    <div class="user-button">
+                        <span id="auth-user-avatar" class="user-avatar">K</span>
 
-                    <span class="user-info">
-                        <strong>KIAD CBS</strong>
-                        <small>Proje Yönetimi</small>
-                    </span>
-                </button>
+                        <span class="user-info">
+                            <strong id="auth-user-name">KIAD Kullanıcısı</strong>
+                            <small id="auth-user-role">Proje Erişimi</small>
+                        </span>
+                    </div>
+                    <button id="auth-logout" class="auth-logout" type="button">Çıkış</button>
+                </div>
 
             </div>
 
@@ -310,19 +349,7 @@
 
     <script src="https://unpkg.com/maplibre-gl@5.6.2/dist/maplibre-gl.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
-    <script src="./js/sidebar.js"></script>
-    <script src="./js/popup.js"></script>
-    <script src="./js/layer-styles.js?v=7"></script>
-    <script src="./js/layers.js?v=2"></script>
-    <script src="./js/map.js?v=3"></script>
-    <script src="./js/dsm.js?v=3"></script>
-    <script src="./js/alignment-km.js?v=3"></script>
-    <script src="./js/layer-panel.js?v=3"></script>
-    <script src="./js/tunnel-detail.js?v=3"></script>
-    <script src="./js/viaduct-detail.js?v=2"></script>
-    <script src="./js/tunnel-faces.js?v=2"></script>
-    <script src="./js/tunnel-charts.js"></script>
-    <script src="./js/dashboard.js?v=5"></script>
+    <script src="./js/auth.js?v=2"></script>
 
 </body>
 

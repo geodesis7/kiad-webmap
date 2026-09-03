@@ -47,7 +47,7 @@ async function loadViaductDetail(assetId) {
     viaductSummaryController = new AbortController();
 
     try {
-        const response = await fetch(
+        const response = await apiFetch(
             `${API_BASE_URL}/api/viaducts/${encodeURIComponent(normalizedAssetId)}/summary`,
             { signal: viaductSummaryController.signal }
         );
@@ -65,6 +65,10 @@ async function loadViaductDetail(assetId) {
         activeViaductSummary = data;
         renderViaductDetail(data);
     } catch (error) {
+        if (isAuthSessionError(error)) {
+            return;
+        }
+
         if (error.name === "AbortError" || activeViaductAssetId !== normalizedAssetId) {
             return;
         }
@@ -437,7 +441,7 @@ async function loadViaductStructures(force = false) {
     viaductStructuresLoading = true;
 
     try {
-        const response = await fetch(
+        const response = await apiFetch(
             `${API_BASE_URL}/api/viaducts/${encodeURIComponent(assetId)}/structures`,
             { signal: viaductStructuresController.signal }
         );
@@ -455,6 +459,10 @@ async function loadViaductStructures(force = false) {
         viaductStructuresData = data;
         renderViaductStructurePanels(data);
     } catch (error) {
+        if (isAuthSessionError(error)) {
+            return;
+        }
+
         if (error.name === "AbortError" || activeViaductAssetId !== assetId) {
             return;
         }
@@ -623,7 +631,7 @@ async function loadViaductSpans(force = false) {
     viaductSpansLoading = true;
 
     try {
-        const response = await fetch(
+        const response = await apiFetch(
             `${API_BASE_URL}/api/viaducts/${encodeURIComponent(assetId)}/spans`,
             { signal: viaductSpansController.signal }
         );
@@ -641,6 +649,10 @@ async function loadViaductSpans(force = false) {
         viaductSpansData = data;
         renderViaductSpans(data);
     } catch (error) {
+        if (isAuthSessionError(error)) {
+            return;
+        }
+
         if (error.name === "AbortError" || activeViaductAssetId !== assetId) {
             return;
         }
