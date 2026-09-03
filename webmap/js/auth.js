@@ -16,6 +16,12 @@ const KIAD_APP_SCRIPTS = Object.freeze([
     "./js/dashboard.js?v=6"
 ]);
 
+const AUTH_ROLE_LABELS = Object.freeze({
+    admin: "Admin",
+    manager: "Manager",
+    viewer: "Viewer"
+});
+
 const authScreen = document.getElementById("auth-screen");
 const authLoading = document.getElementById("auth-loading");
 const authLoadingMessage = document.getElementById("auth-loading-message");
@@ -36,10 +42,17 @@ let unauthorizedTransitionStarted = false;
 let appBootstrapPromise = null;
 let appInitialized = false;
 let reauthenticationRequiresReload = false;
+let authenticatedUser = null;
 
 window.KIAD_API_BASE_URL = getKiadApiBaseUrl();
 window.apiFetch = apiFetch;
 window.isAuthSessionError = isAuthSessionError;
+window.hasRole = hasRole;
+window.KIAD_AUTH = Object.freeze({
+    getUser: getAuthenticatedUser,
+    getRole: () => authenticatedUser?.role ?? null,
+    hasRole
+});
 
 authForm?.addEventListener("submit", handleLoginSubmit);
 authLogout?.addEventListener("click", handleLogout);
@@ -190,7 +203,7 @@ async function handleLogout() {
 
 async function enterAuthenticatedApp(user) {
     authState = "authenticated";
-    updateAuthenticatedUser(user);
+    setAuthenticatedUser(user);
     setAuthLoading("Harita hazırlanıyor...");
 
     if (appShell) {
@@ -289,6 +302,7 @@ function setAuthLoading(message) {
 
 function showLogin(message = "", messageType = "error") {
     authState = "unauthenticated";
+    clearAuthenticatedUser();
     authScreen.hidden = false;
     authScreen.setAttribute("aria-hidden", "false");
     authLoading.hidden = true;
@@ -350,21 +364,74 @@ function clearSensitiveAuthFields() {
     }
 }
 
-function updateAuthenticatedUser(user = {}) {
+function setAuthenticatedUser(user = {}) {
     const username = String(user.username ?? "KIAD Kullanıcısı");
-    const role = String(user.role ?? "Proje Erişimi");
+    const role = normalizeRole(user.role);
+
+    authenticatedUser = Object.freeze({
+        username,
+        role
+    });
 
     if (authUserName) {
         authUserName.textContent = username;
     }
 
     if (authUserRole) {
-        authUserRole.textContent = role;
+        authUserRole.textContent = getRoleLabel(role);
+        authUserRole.dataset.role = role ?? "unknown";
     }
 
     if (authUserAvatar) {
         authUserAvatar.textContent = getUserInitials(username);
     }
+}
+
+function clearAuthenticatedUser() {
+    authenticatedUser = null;
+
+    if (authUserName) {
+        authUserName.textContent = "KIAD Kullanıcısı";
+    }
+
+    if (authUserRole) {
+        authUserRole.textContent = "Rol bilinmiyor";
+        authUserRole.dataset.role = "unknown";
+    }
+
+    if (authUserAvatar) {
+        authUserAvatar.textContent = "K";
+    }
+}
+
+function getAuthenticatedUser() {
+    return authenticatedUser
+        ? Object.freeze({ ...authenticatedUser })
+        : null;
+}
+
+function hasRole(...roles) {
+    const currentRole = authenticatedUser?.role;
+
+    if (!currentRole) {
+        return false;
+    }
+
+    return roles
+        .flat()
+        .some((role) => normalizeRole(role) === currentRole);
+}
+
+function normalizeRole(role) {
+    const normalizedRole = String(role ?? "").trim().toLowerCase();
+
+    return Object.hasOwn(AUTH_ROLE_LABELS, normalizedRole)
+        ? normalizedRole
+        : null;
+}
+
+function getRoleLabel(role) {
+    return role ? AUTH_ROLE_LABELS[role] : "Rol bilinmiyor";
 }
 
 function getUserInitials(username) {
