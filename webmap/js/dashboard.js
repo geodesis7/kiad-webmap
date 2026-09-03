@@ -5,6 +5,7 @@ const dashboardContent = document.getElementById("dashboard-content");
 const dashboardToggle = document.getElementById("dashboard-toggle");
 
 let tunnelDashboardData = null;
+let tunnelProgressSummaryData = null;
 let viaductDashboardData = null;
 let dashboardRequestController = null;
 let tunnelDashboardChart = null;
@@ -43,7 +44,7 @@ async function openTunnelDashboard(force = false) {
         dashboardActiveView = "project";
     }
 
-    if (!force && tunnelDashboardData && viaductDashboardData) {
+    if (!force && tunnelDashboardData && tunnelProgressSummaryData && viaductDashboardData) {
         renderActiveDashboard();
         return;
     }
@@ -53,8 +54,11 @@ async function openTunnelDashboard(force = false) {
     renderTunnelDashboardLoading();
 
     try {
-        const [tunnelResponse, viaductResponse] = await Promise.all([
+        const [tunnelResponse, progressSummaryResponse, viaductResponse] = await Promise.all([
             fetch(`${API_BASE_URL}/api/dashboard/tunnels`, {
+                signal: dashboardRequestController.signal
+            }),
+            fetch(`${API_BASE_URL}/api/tunnels/progress-summary`, {
                 signal: dashboardRequestController.signal
             }),
             fetch(`${API_BASE_URL}/api/dashboard/viaducts`, {
@@ -62,14 +66,16 @@ async function openTunnelDashboard(force = false) {
             })
         ]);
 
-        if (!tunnelResponse.ok || !viaductResponse.ok) {
+        if (!tunnelResponse.ok || !progressSummaryResponse.ok || !viaductResponse.ok) {
             throw new Error(
-                `API isteği başarısız: tunnels=${tunnelResponse.status}, viaducts=${viaductResponse.status}`
+                `API isteği başarısız: tunnels=${tunnelResponse.status}, ` +
+                `progress=${progressSummaryResponse.status}, viaducts=${viaductResponse.status}`
             );
         }
 
-        [tunnelDashboardData, viaductDashboardData] = await Promise.all([
+        [tunnelDashboardData, tunnelProgressSummaryData, viaductDashboardData] = await Promise.all([
             tunnelResponse.json(),
+            progressSummaryResponse.json(),
             viaductResponse.json()
         ]);
         dashboardAssetCount = getDashboardAssetCount();
@@ -153,10 +159,9 @@ function renderTunnelDashboardError() {
         ?.addEventListener("click", () => openTunnelDashboard(true));
 }
 
-function renderTunnelDashboard(data = {}) {
-    const summary = data.summary ?? {};
-    const tunnels = sortDashboardTunnels(data.tunnels);
-    const schematicTunnels = getDashboardSchematicTunnels(tunnels);
+function renderTunnelDashboard(data = {}, progressData = {}) {
+    const schematicTunnels = getCanonicalTunnelPortfolio(progressData, data.tunnels);
+    const summary = createCanonicalTunnelSummary(schematicTunnels, data.summary);
     const activeFaces = Array.isArray(data.active_faces)
         ? data.active_faces
         : [];
@@ -254,24 +259,32 @@ function createDashboardNavigation(activeView) {
 }
 
 function renderActiveDashboard() {
-    if (!tunnelDashboardData || !viaductDashboardData) {
+    if (!tunnelDashboardData || !tunnelProgressSummaryData || !viaductDashboardData) {
         return;
     }
 
     if (dashboardActiveView === "tunnels") {
-        renderTunnelDashboard(tunnelDashboardData);
+        renderTunnelDashboard(tunnelDashboardData, tunnelProgressSummaryData);
     } else if (dashboardActiveView === "viaducts") {
         renderViaductDashboard(viaductDashboardData);
     } else {
         dashboardActiveView = "project";
-        renderProjectDashboard(tunnelDashboardData, viaductDashboardData);
+        renderProjectDashboard(
+            tunnelDashboardData,
+            viaductDashboardData,
+            tunnelProgressSummaryData
+        );
     }
 }
 
-function renderProjectDashboard(tunnelData = {}, viaductData = {}) {
+function renderProjectDashboard(tunnelData = {}, viaductData = {}, progressData = {}) {
     destroyTunnelDashboardChart();
 
-    const tunnelSummary = tunnelData.summary ?? {};
+    const tunnelPortfolio = getCanonicalTunnelPortfolio(progressData, tunnelData.tunnels);
+    const tunnelSummary = createCanonicalTunnelSummary(
+        tunnelPortfolio,
+        tunnelData.summary
+    );
     const viaductSummary = viaductData.summary ?? {};
     const viaducts = Array.isArray(viaductData.viaducts) ? viaductData.viaducts : [];
     const latestDataDate = getLatestDashboardDate(
@@ -864,7 +877,8 @@ function createDashboardTunnelList(tunnels) {
 
 function createDashboardTunnelSchematic(tunnel) {
     const code = escapeDashboardHtml(formatTunnelFallback(tunnel.asset_code));
-    const name = escapeDashboardHtml(formatTunnelFallback(tunnel.name));
+    const name = escapeDashboardHtml(formatTunnelFallback(tunnel.asset_name));
+    const category = escapeDashboardHtml(formatTunnelFallback(tunnel.tunnel_category));
 
     return `
         <article class="dashboard-tunnel-schematic" role="button" tabindex="0"
@@ -873,7 +887,7 @@ function createDashboardTunnelSchematic(tunnel) {
             <header class="dashboard-tunnel-schematic-header">
                 <span class="dashboard-asset-code">${code}</span>
                 <strong>${name}</strong>
-                <small>${escapeDashboardHtml(formatDashboardLength(tunnel.length))}</small>
+                <small>${category} · ${escapeDashboardHtml(formatDashboardLength(tunnel.tunnel_length_m))}</small>
             </header>
 
             <div class="dashboard-tunnel-desktop">
@@ -884,6 +898,17 @@ function createDashboardTunnelSchematic(tunnel) {
                 ${createDashboardStageTrack(tunnel, "lower", "Alt Yarı")}
                 ${createDashboardStageTrack(tunnel, "invert", "Invert")}
             </div>
+            <dl class="dashboard-tunnel-canonical-metrics">
+                ${createDashboardMetric("Giriş Kazısı", formatDashboardLength(tunnel.entrance_excavation_m))}
+                ${createDashboardMetric("Çıkış Kazısı", formatDashboardLength(tunnel.exit_excavation_m))}
+                ${createDashboardMetric("Toplam Kazı", formatDashboardLength(tunnel.total_excavation_m))}
+                ${createDashboardMetric("Kalan", formatDashboardLength(tunnel.remaining_length_m))}
+                ${createDashboardProgressMetric(
+                    "Kazı İlerlemesi",
+                    formatDashboardPrecisePercent(tunnel.progress_percent),
+                    "toplam uzunluğa oranlı"
+                )}
+            </dl>
         </article>
     `;
 }
@@ -1136,14 +1161,102 @@ function sortDashboardTunnels(value) {
     return tunnels;
 }
 
-function getDashboardSchematicTunnels(tunnels) {
-    return tunnels.filter((tunnel) => {
-        const priority = typeof getTunnelSortPriority === "function"
-            ? getTunnelSortPriority(tunnel.asset_code)
-            : 4;
+function getCanonicalTunnelPortfolio(progressData = {}, legacyTunnels = []) {
+    const legacyRows = Array.isArray(legacyTunnels) ? legacyTunnels : [];
+    const legacyById = new Map(
+        legacyRows.map((tunnel) => [Number(tunnel.asset_id), tunnel])
+    );
+    const legacyByCode = new Map(
+        legacyRows.map((tunnel) => [normalizeDashboardTunnelCode(tunnel.asset_code), tunnel])
+    );
+    const items = Array.isArray(progressData.items) ? progressData.items : [];
 
-        return priority < 3 && tunnel.has_progress_data === true;
-    });
+    return sortDashboardTunnels(items
+        .filter(isCanonicalTunnelPortfolioRow)
+        .map((tunnel) => {
+            const legacy = legacyById.get(Number(tunnel.asset_id))
+                ?? legacyByCode.get(normalizeDashboardTunnelCode(tunnel.asset_code))
+                ?? {};
+            const tunnelLength = Number(tunnel.tunnel_length_m);
+
+            return {
+                ...legacy,
+                ...tunnel,
+                name: tunnel.asset_name,
+                length: tunnel.tunnel_length_m,
+                has_progress_data: true,
+                faces: {
+                    entrance: createCanonicalTunnelFace(
+                        legacy.faces?.entrance,
+                        tunnel.entrance_excavation_m,
+                        tunnelLength
+                    ),
+                    exit: createCanonicalTunnelFace(
+                        legacy.faces?.exit,
+                        tunnel.exit_excavation_m,
+                        tunnelLength
+                    )
+                }
+            };
+        }));
+}
+
+function isCanonicalTunnelPortfolioRow(tunnel) {
+    const includedCategories = new Set(["MAIN", "EMERGENCY", "ESCAPE"]);
+    const tunnelLength = Number(tunnel?.tunnel_length_m);
+    const totalExcavation = Number(tunnel?.total_excavation_m);
+    const progressPercent = Number(tunnel?.progress_percent);
+
+    return includedCategories.has(String(tunnel?.tunnel_category ?? "").toUpperCase())
+        && Number.isFinite(tunnelLength)
+        && tunnelLength > 0
+        && Number.isFinite(totalExcavation)
+        && totalExcavation > 0
+        && Number.isFinite(progressPercent)
+        && progressPercent > 0;
+}
+
+function createCanonicalTunnelFace(legacyFace, excavationMeters, tunnelLength) {
+    const meters = Number(excavationMeters);
+    const percent = Number.isFinite(meters) && tunnelLength > 0
+        ? (meters / tunnelLength) * 100
+        : null;
+
+    return {
+        ...(legacyFace ?? {}),
+        upper: {
+            ...(legacyFace?.upper ?? {}),
+            meters: Number.isFinite(meters) ? meters : null,
+            percent
+        }
+    };
+}
+
+function createCanonicalTunnelSummary(tunnels, legacySummary = {}) {
+    const portfolio = Array.isArray(tunnels) ? tunnels : [];
+    const totalLength = portfolio.reduce(
+        (sum, tunnel) => sum + Number(tunnel.tunnel_length_m || 0),
+        0
+    );
+    const totalExcavation = portfolio.reduce(
+        (sum, tunnel) => sum + Number(tunnel.total_excavation_m || 0),
+        0
+    );
+
+    return {
+        ...(legacySummary ?? {}),
+        total_tunnel_count: portfolio.length,
+        active_tunnel_count: portfolio.length,
+        total_tunnel_length: totalLength,
+        total_excavated_m: totalExcavation,
+        overall_progress_percent: totalLength > 0
+            ? (totalExcavation / totalLength) * 100
+            : null
+    };
+}
+
+function normalizeDashboardTunnelCode(value) {
+    return String(value ?? "").trim().toLowerCase();
 }
 
 function formatDashboardChartDate(value) {

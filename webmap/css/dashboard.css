@@ -814,6 +814,39 @@
     color: var(--color-text-muted);
     font-size: 10px;
     font-weight: 650;
+    white-space: nowrap;
+}
+
+.dashboard-tunnel-canonical-metrics {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 8px;
+    margin: 13px 0 0;
+    padding-top: 11px;
+    border-top: 1px solid #e4e9ef;
+}
+
+.dashboard-tunnel-canonical-metrics > div {
+    min-width: 0;
+}
+
+.dashboard-tunnel-canonical-metrics dt,
+.dashboard-tunnel-canonical-metrics small {
+    display: block;
+    color: var(--color-text-muted);
+    font-size: 8px;
+    font-weight: 650;
+    line-height: 1.3;
+}
+
+.dashboard-tunnel-canonical-metrics dd,
+.dashboard-tunnel-canonical-metrics strong {
+    display: block;
+    margin: 3px 0 0;
+    color: var(--color-primary-900);
+    font-size: 10px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
 }
 
 .dashboard-portal-labels {
@@ -1235,6 +1268,10 @@
 
     .dashboard-tunnel-schematic-header small {
         font-size: 8px;
+    }
+
+    .dashboard-tunnel-canonical-metrics {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
     .dashboard-portal-labels,

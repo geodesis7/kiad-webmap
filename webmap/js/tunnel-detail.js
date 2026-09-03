@@ -8,11 +8,26 @@ const tunnelDetailContent =
 
 let tunnelDetailRequestController = null;
 let tunnelProgressRequestController = null;
+let tunnelStagesRequestController = null;
 let activeTunnelAssetId = null;
 let pendingTunnelDetailView = null;
+let tunnelStagesCache = null;
+let tunnelStagesLoadingAssetId = null;
 
 const tunnelDetailCache = new Map();
 const tunnelProgressCache = new Map();
+const TUNNEL_STAGE_CONFIG = Object.freeze({
+    TOP_HEADING: { label: "Üst Yarı", order: 0, primary: true },
+    RIGHT_BENCH: { label: "Sağ Alt Yarı", order: 1 },
+    LEFT_BENCH: { label: "Sol Alt Yarı", order: 2 },
+    RIGHT_INVERT: { label: "Sağ İnvert", order: 3 },
+    LEFT_INVERT: { label: "Sol İnvert", order: 4 },
+    INVERT: { label: "İnvert", order: 5 }
+});
+const TUNNEL_FACE_ROLE_LABELS = Object.freeze({
+    ENTRANCE: "GİRİŞ",
+    EXIT: "ÇIKIŞ"
+});
 
 window.addEventListener("kiad:tunnel-detail-open", (event) => {
     loadTunnelDetail(event.detail?.assetId, event.detail);
@@ -45,6 +60,7 @@ async function loadTunnelDetail(assetId, options = {}) {
         return;
     }
 
+    resetTunnelStagesSession();
     activeTunnelAssetId = normalizedAssetId;
     showTunnelDetailDrawer();
 
@@ -54,6 +70,7 @@ async function loadTunnelDetail(assetId, options = {}) {
 
     tunnelDetailRequestController?.abort();
     tunnelProgressRequestController?.abort();
+    tunnelStagesRequestController?.abort();
 
     if (tunnelDetailCache.has(normalizedAssetId)) {
         renderTunnelDetail(tunnelDetailCache.get(normalizedAssetId));
@@ -117,6 +134,7 @@ function closeTunnelDetailDrawer() {
 
     tunnelDetailRequestController?.abort();
     tunnelProgressRequestController?.abort();
+    resetTunnelStagesSession();
 
     if (typeof resetTunnelCharts === "function") {
         resetTunnelCharts(null);
@@ -272,7 +290,7 @@ function renderTunnelDetail(tunnel = {}) {
 
             <div id="tunnel-productions-panel" class="tunnel-detail-tab-panel" role="tabpanel"
                 data-tunnel-panel="productions" hidden>
-                ${createTunnelProductionsView(summary, faces)}
+                ${createTunnelStagesIdle()}
             </div>
 
             <div id="tunnel-history-panel" class="tunnel-detail-tab-panel" role="tabpanel"
@@ -362,6 +380,10 @@ function activateTunnelDetailTab(target) {
         loadTunnelProgress(activeTunnelAssetId);
     }
 
+    if (target === "productions") {
+        loadTunnelStages(activeTunnelAssetId);
+    }
+
     if (
         target === "charts" &&
         typeof loadTunnelCharts === "function"
@@ -412,6 +434,281 @@ function openTunnelDetail(assetId, options = {}) {
 }
 
 window.openTunnelDetail = openTunnelDetail;
+
+async function loadTunnelStages(assetId, force = false) {
+    const normalizedAssetId = Number(assetId);
+    const stagePanel = getTunnelStagesPanel();
+
+    if (!Number.isFinite(normalizedAssetId) || !stagePanel) {
+        return;
+    }
+
+    if (
+        !force &&
+        tunnelStagesCache?.assetId === normalizedAssetId
+    ) {
+        renderTunnelStages(tunnelStagesCache.data);
+        return;
+    }
+
+    if (!force && tunnelStagesLoadingAssetId === normalizedAssetId) {
+        return;
+    }
+
+    tunnelStagesRequestController?.abort();
+    tunnelStagesRequestController = new AbortController();
+    tunnelStagesLoadingAssetId = normalizedAssetId;
+    renderTunnelStagesLoading();
+
+    try {
+        const response = await fetch(
+            `${API_BASE_URL}/api/tunnels/${encodeURIComponent(normalizedAssetId)}/stages`,
+            {
+                signal: tunnelStagesRequestController.signal
+            }
+        );
+
+        if (!response.ok) {
+            throw new Error(`API isteği başarısız: ${response.status}`);
+        }
+
+        const stageData = await response.json();
+
+        if (activeTunnelAssetId !== normalizedAssetId) {
+            return;
+        }
+
+        tunnelStagesCache = {
+            assetId: normalizedAssetId,
+            data: stageData
+        };
+        renderTunnelStages(stageData);
+    } catch (error) {
+        if (error.name === "AbortError") {
+            return;
+        }
+
+        if (activeTunnelAssetId !== normalizedAssetId) {
+            return;
+        }
+
+        console.error("Tünel imalat verileri yüklenemedi:", error);
+        renderTunnelStagesError();
+    } finally {
+        if (tunnelStagesLoadingAssetId === normalizedAssetId) {
+            tunnelStagesLoadingAssetId = null;
+        }
+    }
+}
+
+function resetTunnelStagesSession() {
+    tunnelStagesRequestController?.abort();
+    tunnelStagesRequestController = null;
+    tunnelStagesCache = null;
+    tunnelStagesLoadingAssetId = null;
+}
+
+function getTunnelStagesPanel() {
+    return tunnelDetailContent
+        ?.querySelector('[data-tunnel-panel="productions"]');
+}
+
+function createTunnelStagesIdle() {
+    return `
+        <div class="tunnel-history-state">
+            İmalatlar sekmesi açıldığında yüklenir.
+        </div>
+    `;
+}
+
+function renderTunnelStagesLoading() {
+    const stagePanel = getTunnelStagesPanel();
+
+    if (!stagePanel) {
+        return;
+    }
+
+    stagePanel.innerHTML = `
+        <div class="tunnel-history-state">
+            <span class="tunnel-detail-spinner" aria-hidden="true"></span>
+            <span>İmalat verileri yükleniyor...</span>
+        </div>
+    `;
+}
+
+function renderTunnelStagesError() {
+    const stagePanel = getTunnelStagesPanel();
+
+    if (!stagePanel) {
+        return;
+    }
+
+    stagePanel.innerHTML = `
+        <div class="tunnel-history-state tunnel-history-error">
+            <strong>İmalat verileri yüklenemedi.</strong>
+            <button type="button" data-tunnel-stages-retry>Yeniden Dene</button>
+        </div>
+    `;
+
+    stagePanel
+        .querySelector("[data-tunnel-stages-retry]")
+        ?.addEventListener("click", () => loadTunnelStages(activeTunnelAssetId, true));
+}
+
+function renderTunnelStages(stageData = {}) {
+    const stagePanel = getTunnelStagesPanel();
+
+    if (!stagePanel) {
+        return;
+    }
+
+    const stages = Array.isArray(stageData.stages) ? stageData.stages : [];
+
+    if (stages.length === 0) {
+        stagePanel.innerHTML = `
+            <div class="tunnel-faces-empty">
+                <strong>Stage bazlı imalat verisi bulunamadı</strong>
+                <span>Bu tünel için stage bazlı imalat verisi bulunmuyor.</span>
+            </div>
+        `;
+        return;
+    }
+
+    const asset = stageData.asset ?? {};
+    const faceGroups = groupTunnelStagesByFace(stages);
+
+    stagePanel.innerHTML = `
+        <div class="tunnel-stage-view">
+            ${faceGroups.map((group) => createTunnelStageFaceGroup(asset, group)).join("")}
+        </div>
+    `;
+}
+
+function groupTunnelStagesByFace(stages) {
+    const groups = new Map();
+
+    stages.forEach((stage) => {
+        const faceId = Number(stage.face_id);
+        const key = Number.isFinite(faceId)
+            ? `id:${faceId}`
+            : `role:${String(stage.face_role ?? stage.face_code ?? "UNKNOWN")}`;
+
+        if (!groups.has(key)) {
+            groups.set(key, {
+                face_id: Number.isFinite(faceId) ? faceId : null,
+                face_code: stage.face_code,
+                face_role: stage.face_role,
+                advance_direction: stage.advance_direction,
+                stages: []
+            });
+        }
+
+        groups.get(key).stages.push(stage);
+    });
+
+    return [...groups.values()]
+        .map((group) => ({
+            ...group,
+            stages: [...group.stages].sort(compareTunnelStages)
+        }))
+        .sort(compareTunnelStageFaces);
+}
+
+function compareTunnelStageFaces(left, right) {
+    const roleOrder = { ENTRANCE: 0, EXIT: 1 };
+    const leftRole = String(left.face_role ?? "").toUpperCase();
+    const rightRole = String(right.face_role ?? "").toUpperCase();
+    const orderDifference = (roleOrder[leftRole] ?? 2) - (roleOrder[rightRole] ?? 2);
+
+    if (orderDifference !== 0) {
+        return orderDifference;
+    }
+
+    return String(left.face_code ?? "").localeCompare(
+        String(right.face_code ?? ""),
+        "tr",
+        { numeric: true, sensitivity: "base" }
+    );
+}
+
+function compareTunnelStages(left, right) {
+    return getTunnelStageConfig(left.work_stage).order
+        - getTunnelStageConfig(right.work_stage).order;
+}
+
+function createTunnelStageFaceGroup(asset, group) {
+    const assetCode = String(asset.asset_code ?? "Tünel").toUpperCase();
+    const faceLabel = getTunnelStageFaceLabel(group);
+    const roleClass = String(group.face_role ?? "").toUpperCase() === "EXIT"
+        ? " is-exit"
+        : " is-entrance";
+
+    return `
+        <section class="tunnel-stage-face${roleClass}">
+            <header class="tunnel-stage-face-heading">
+                <div>
+                    <span>${escapeTunnelDetailHtml(faceLabel)}</span>
+                    <h3>${escapeTunnelDetailHtml(`${assetCode} ${faceLabel}`)}</h3>
+                </div>
+                <small>${escapeTunnelDetailHtml(formatTunnelCount(group.stages.length))} stage</small>
+            </header>
+            <div class="tunnel-stage-list">
+                ${group.stages.map(createTunnelStageRow).join("")}
+            </div>
+        </section>
+    `;
+}
+
+function createTunnelStageRow(stage) {
+    const stageConfig = getTunnelStageConfig(stage.work_stage);
+    const progressPercent = Number(stage.progress_percent);
+    const progressNow = Number.isFinite(progressPercent)
+        ? clampTunnelProgress(progressPercent)
+        : 0;
+
+    return `
+        <article class="tunnel-stage-row${stageConfig.primary ? " is-primary" : ""}">
+            <div class="tunnel-stage-row-heading">
+                <div>
+                    <strong>${escapeTunnelDetailHtml(stageConfig.label)}</strong>
+                    <small>${escapeTunnelDetailHtml(formatTunnelSupportCount(stage.support_count))}</small>
+                </div>
+                <div class="tunnel-stage-values">
+                    <strong>${escapeTunnelDetailHtml(formatTunnelLength(stage.progress_m))}</strong>
+                    <span>${escapeTunnelDetailHtml(formatPercent(stage.progress_percent, 2) ?? "-")}</span>
+                </div>
+            </div>
+            <div class="tunnel-stage-progress" role="progressbar"
+                aria-label="${escapeTunnelDetailHtml(stageConfig.label)} ilerlemesi"
+                aria-valuemin="0" aria-valuemax="100" aria-valuenow="${progressNow}">
+                <span style="width:${progressNow}%"></span>
+            </div>
+        </article>
+    `;
+}
+
+function getTunnelStageConfig(workStage) {
+    const stageCode = String(workStage ?? "").toUpperCase();
+
+    return TUNNEL_STAGE_CONFIG[stageCode] ?? {
+        label: stageCode ? stageCode.replaceAll("_", " ") : "Bilinmeyen Stage",
+        order: 99,
+        primary: false
+    };
+}
+
+function getTunnelStageFaceLabel(group) {
+    const role = String(group.face_role ?? "").toUpperCase();
+
+    return TUNNEL_FACE_ROLE_LABELS[role]
+        ?? formatTunnelFallback(group.face_code);
+}
+
+function formatTunnelSupportCount(value) {
+    return hasTunnelValue(value)
+        ? `${formatTunnelCount(value)} iksa`
+        : "-";
+}
 
 async function loadTunnelProgress(assetId, days = 30, force = false) {
     const normalizedAssetId = Number(assetId);
@@ -881,162 +1178,6 @@ function formatTunnelDirection(value) {
     };
 
     return directionLabels[value] ?? formatTunnelFallback(value);
-}
-
-function createTunnelProductionsView(summary, faces) {
-    const excavationValues = [
-        summary.total_excavated_m,
-        summary.left_bench_m,
-        summary.right_bench_m,
-        summary.left_invert_m,
-        summary.right_invert_m
-    ];
-    const hasExcavationData = excavationValues.some(hasTunnelValue);
-    const hasForepolingData =
-        hasTunnelValue(summary.total_forepoling) ||
-        hasTunnelValue(summary.forepoling_element_count) ||
-        hasTunnelValue(summary.latest_forepoling_date);
-
-    if (!hasExcavationData && !hasForepolingData) {
-        return `
-            <div class="tunnel-faces-empty">
-                <strong>İmalat verisi bulunamadı</strong>
-                <span>Bu tünel için gösterilecek güncel imalat kaydı yok.</span>
-            </div>
-        `;
-    }
-
-    const excavationMetrics = [
-        ["Üst Yarı / Fiziksel", formatTunnelLength(summary.total_excavated_m)],
-        ["Alt Yarı (Sol)", formatTunnelLength(summary.left_bench_m)],
-        ["Alt Yarı (Sağ)", formatTunnelLength(summary.right_bench_m)],
-        ["Invert (Sol)", formatTunnelLength(summary.left_invert_m)],
-        ["Invert (Sağ)", formatTunnelLength(summary.right_invert_m)]
-    ];
-    const activeFaces = faces.filter(
-        (face) => normalizeBoolean(face.is_active) === true
-    );
-
-    return `
-        <div class="tunnel-production-view">
-            <section class="tunnel-production-section">
-                <header class="tunnel-production-heading">
-                    <div>
-                        <span>İmalat Durumu</span>
-                        <h3>Kazı</h3>
-                    </div>
-                    <small>Çakışan fiziksel aralıklar tek sayılmıştır.</small>
-                </header>
-
-                <div class="tunnel-production-grid">
-                    ${excavationMetrics.map(([label, value]) => createTunnelProductionMetric(label, value)).join("")}
-                </div>
-
-                ${createFaceExcavationDetails(faces)}
-            </section>
-
-            <section class="tunnel-production-section">
-                <header class="tunnel-production-heading">
-                    <div>
-                        <span>Destek İmalatı</span>
-                        <h3>Forepoling</h3>
-                    </div>
-                </header>
-
-                <div class="tunnel-production-grid">
-                    ${createTunnelProductionMetric("Toplam", formatTunnelLength(summary.total_forepoling))}
-                    ${createTunnelProductionMetric("Eleman Sayısı", formatTunnelCount(summary.forepoling_element_count))}
-                    ${createTunnelProductionMetric("Son Kayıt", formatTunnelDate(summary.latest_forepoling_date))}
-                </div>
-
-                ${createActiveFaceForepolingDetails(activeFaces)}
-            </section>
-        </div>
-    `;
-}
-
-function createTunnelProductionMetric(label, value) {
-    return `
-        <div class="tunnel-production-metric">
-            <span>${escapeTunnelDetailHtml(label)}</span>
-            <strong>${escapeTunnelDetailHtml(value)}</strong>
-        </div>
-    `;
-}
-
-function createFaceExcavationDetails(faces) {
-    const facesWithExcavation = faces.filter((face) => {
-        return [
-            face.total_progress,
-            face.left_bench_m,
-            face.right_bench_m,
-            face.left_invert_m,
-            face.right_invert_m
-        ].some(hasTunnelValue);
-    });
-
-    if (facesWithExcavation.length === 0) {
-        return "";
-    }
-
-    return `
-        <div class="tunnel-production-subsection">
-            <h4>Ayna Bazlı Kazı</h4>
-            <div class="tunnel-production-face-list">
-                ${facesWithExcavation.map((face) => `
-                    <article class="tunnel-production-face-card">
-                        <div class="tunnel-production-face-title">
-                            <strong>${escapeTunnelDetailHtml(formatTunnelFallback(face.face_code))}</strong>
-                            <span>${escapeTunnelDetailHtml(formatTunnelFallback(face.face_name))}</span>
-                        </div>
-                        <dl>
-                            ${createTunnelProductionRow("Üst Yarı", formatTunnelLength(face.total_progress))}
-                            ${createTunnelProductionRow("Alt Yarı Sol", formatTunnelLength(face.left_bench_m))}
-                            ${createTunnelProductionRow("Alt Yarı Sağ", formatTunnelLength(face.right_bench_m))}
-                            ${createTunnelProductionRow("Invert Sol", formatTunnelLength(face.left_invert_m))}
-                            ${createTunnelProductionRow("Invert Sağ", formatTunnelLength(face.right_invert_m))}
-                        </dl>
-                    </article>
-                `).join("")}
-            </div>
-        </div>
-    `;
-}
-
-function createActiveFaceForepolingDetails(activeFaces) {
-    if (activeFaces.length === 0) {
-        return "";
-    }
-
-    return `
-        <div class="tunnel-production-subsection">
-            <h4>Aktif Aynalar</h4>
-            <div class="tunnel-production-face-list">
-                ${activeFaces.map((face) => `
-                    <article class="tunnel-production-face-card is-active">
-                        <div class="tunnel-production-face-title">
-                            <strong>${escapeTunnelDetailHtml(formatTunnelFallback(face.face_code))}</strong>
-                            <span>${escapeTunnelDetailHtml(formatTunnelFallback(face.face_name))}</span>
-                        </div>
-                        <dl>
-                            ${createTunnelProductionRow("Toplam", formatTunnelLength(face.total_forepoling))}
-                            ${createTunnelProductionRow("Eleman", formatTunnelCount(face.forepoling_element_count))}
-                            ${createTunnelProductionRow("Son Kayıt", formatTunnelDate(face.latest_forepoling_date))}
-                        </dl>
-                    </article>
-                `).join("")}
-            </div>
-        </div>
-    `;
-}
-
-function createTunnelProductionRow(label, value) {
-    return `
-        <div>
-            <dt>${escapeTunnelDetailHtml(label)}</dt>
-            <dd>${escapeTunnelDetailHtml(value)}</dd>
-        </div>
-    `;
 }
 
 function hasTunnelValue(value) {
