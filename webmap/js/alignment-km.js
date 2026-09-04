@@ -50,7 +50,7 @@ function addAlignmentKmLayers() {
     map.addSource(ALIGNMENT_KM_SOURCE_ID, {
         type: "vector",
         tiles: [
-            "https://kiad.tr/tiles/public.vw_alignment_km_points_4326/{z}/{x}/{y}.pbf"
+            getVectorTileUrl("public.vw_alignment_km_points_4326")
         ],
         minzoom: 0,
         maxzoom: 22,

@@ -41,7 +41,7 @@ function addTunnelFaceLayers() {
     map.addSource(TUNNEL_FACE_SOURCE_ID, {
         type: "vector",
         tiles: [
-            "https://kiad.tr/tiles/public.web_tunnel_face_points/{z}/{x}/{y}.pbf"
+            getVectorTileUrl("public.web_tunnel_face_points")
         ],
         minzoom: 0,
         maxzoom: 22,

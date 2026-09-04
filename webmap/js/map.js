@@ -1,5 +1,13 @@
 "use strict";
 
+const TILE_BASE = ["127.0.0.1", "localhost"].includes(window.location.hostname)
+    ? "http://127.0.0.1:57801/tiles"
+    : "/tiles";
+
+function getVectorTileUrl(sourceLayer) {
+    return `${TILE_BASE}/${sourceLayer}/{z}/{x}/{y}.pbf`;
+}
+
 const PROJECT_BOUNDS = [
     [43.213181901707514, 39.65029208702538],
     [44.80661416668261, 40.688585809429775]
@@ -261,7 +269,7 @@ map.on("load", () => {
     map.addSource("assets-source", {
         type: "vector",
         tiles: [
-            "https://kiad.tr/tiles/public.web_assets/{z}/{x}/{y}.pbf"
+            getVectorTileUrl("public.web_assets")
         ],
         minzoom: 0,
         maxzoom: 22,

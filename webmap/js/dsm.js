@@ -23,7 +23,7 @@ function addDsmLayers(mapInstance) {
     mapInstance.addSource(DSM_SOURCE_ID, {
         type: "vector",
         tiles: [
-            "https://kiad.tr/tiles/public.web_dsm_columns/{z}/{x}/{y}.pbf"
+            getVectorTileUrl("public.web_dsm_columns")
         ],
         minzoom: 0,
         maxzoom: 22,

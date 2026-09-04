@@ -5,13 +5,13 @@ const KIAD_APP_SCRIPTS = Object.freeze([
     "./js/popup.js",
     "./js/layer-styles.js?v=7",
     "./js/layers.js?v=2",
-    "./js/map.js?v=3",
-    "./js/dsm.js?v=3",
-    "./js/alignment-km.js?v=3",
+    "./js/map.js?v=4",
+    "./js/dsm.js?v=4",
+    "./js/alignment-km.js?v=4",
     "./js/layer-panel.js?v=4",
     "./js/tunnel-detail.js?v=4",
     "./js/viaduct-detail.js?v=3",
-    "./js/tunnel-faces.js?v=2",
+    "./js/tunnel-faces.js?v=3",
     "./js/tunnel-charts.js?v=2",
     "./js/dashboard.js?v=6"
 ]);
