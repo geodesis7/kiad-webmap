@@ -2,7 +2,7 @@
 
 const TILE_BASE = ["127.0.0.1", "localhost"].includes(window.location.hostname)
     ? "http://127.0.0.1:57801/tiles"
-    : "/tiles";
+    : `${window.location.origin}/tiles`;
 
 function getVectorTileUrl(sourceLayer) {
     return `${TILE_BASE}/${sourceLayer}/{z}/{x}/{y}.pbf`;
