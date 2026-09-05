@@ -30,13 +30,7 @@ async function loadViaductDetail(assetId) {
         return;
     }
 
-    if (typeof closeTunnelDetailDrawer === "function") {
-        closeTunnelDetailDrawer();
-    }
-
-    if (typeof window.closeCulvertDetailDrawer === "function") {
-        window.closeCulvertDetailDrawer();
-    }
+    window.closeAllDetailDrawers?.("viaduct");
 
     if (
         normalizedAssetId === activeViaductAssetId &&

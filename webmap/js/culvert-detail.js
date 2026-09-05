@@ -34,8 +34,7 @@ async function loadCulvertDetail(assetId) {
 
     if (!Number.isFinite(normalizedAssetId)) return;
 
-    if (typeof closeTunnelDetailDrawer === "function") closeTunnelDetailDrawer();
-    if (typeof closeViaductDetailDrawer === "function") closeViaductDetailDrawer();
+    window.closeAllDetailDrawers?.("culvert");
 
     if (normalizedAssetId === activeCulvertAssetId && isCulvertDetailDrawerOpen()) {
         return;

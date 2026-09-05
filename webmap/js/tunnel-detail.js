@@ -46,13 +46,7 @@ async function loadTunnelDetail(assetId, options = {}) {
         return;
     }
 
-    if (typeof window.closeViaductDetailDrawer === "function") {
-        window.closeViaductDetailDrawer();
-    }
-
-    if (typeof window.closeCulvertDetailDrawer === "function") {
-        window.closeCulvertDetailDrawer();
-    }
+    window.closeAllDetailDrawers?.("tunnel");
 
     pendingTunnelDetailView = normalizeTunnelDetailView(options);
 
@@ -442,6 +436,7 @@ function openTunnelDetail(assetId, options = {}) {
 }
 
 window.openTunnelDetail = openTunnelDetail;
+window.closeTunnelDetailDrawer = closeTunnelDetailDrawer;
 
 async function loadTunnelStages(assetId, force = false) {
     const normalizedAssetId = Number(assetId);
