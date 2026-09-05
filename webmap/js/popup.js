@@ -194,7 +194,7 @@ function ensurePopupVisible(mapInstance, popup) {
         }
     }
 
-    ["tunnel-detail-drawer", "viaduct-detail-drawer"].forEach((drawerId) => {
+    ["tunnel-detail-drawer", "viaduct-detail-drawer", "culvert-detail-drawer"].forEach((drawerId) => {
         const drawer = document.getElementById(drawerId);
 
         if (
@@ -374,7 +374,8 @@ function createPopupHtml(properties = {}) {
 function createAssetDetailAction(properties = {}) {
     return [
         createTunnelDetailAction(properties),
-        createViaductDetailAction(properties)
+        createViaductDetailAction(properties),
+        createCulvertDetailAction(properties)
     ].filter(Boolean).join("");
 }
 
@@ -426,6 +427,24 @@ function createViaductDetailAction(properties = {}) {
     `;
 }
 
+function createCulvertDetailAction(properties = {}) {
+    const typeId = toFiniteNumber(properties.type_id);
+    const assetId = toFiniteNumber(properties.asset_id);
+
+    if (typeId !== 7 || assetId === null) {
+        return "";
+    }
+
+    return `
+        <footer class="asset-popup-actions">
+            <button class="tunnel-detail-button" type="button"
+                data-popup-action="open-culvert-detail">
+                Menfez Detayını Aç
+            </button>
+        </footer>
+    `;
+}
+
 /**
  * Popup içindeki aksiyonları ilgili varlığa bağlar.
  *
@@ -445,6 +464,13 @@ function bindPopupActions(popup, properties = {}) {
         ?.querySelector('[data-popup-action="open-viaduct-detail"]')
         ?.addEventListener("click", () => {
             openViaductDetailDrawer(properties.asset_id);
+        });
+
+    popup
+        .getElement()
+        ?.querySelector('[data-popup-action="open-culvert-detail"]')
+        ?.addEventListener("click", () => {
+            openCulvertDetailDrawer(properties.asset_id);
         });
 }
 
@@ -482,6 +508,20 @@ function openViaductDetailDrawer(assetId) {
             detail: {
                 assetId: normalizedAssetId
             }
+        })
+    );
+}
+
+function openCulvertDetailDrawer(assetId) {
+    const normalizedAssetId = toFiniteNumber(assetId);
+
+    if (normalizedAssetId === null) {
+        return;
+    }
+
+    window.dispatchEvent(
+        new CustomEvent("kiad:culvert-detail-open", {
+            detail: { assetId: normalizedAssetId }
         })
     );
 }

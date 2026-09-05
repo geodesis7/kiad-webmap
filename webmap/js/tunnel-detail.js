@@ -50,6 +50,10 @@ async function loadTunnelDetail(assetId, options = {}) {
         window.closeViaductDetailDrawer();
     }
 
+    if (typeof window.closeCulvertDetailDrawer === "function") {
+        window.closeCulvertDetailDrawer();
+    }
+
     pendingTunnelDetailView = normalizeTunnelDetailView(options);
 
     if (

@@ -1,0 +1,86 @@
+.culvert-detail-tabs .tunnel-detail-tab {
+    flex: 1 1 auto;
+    padding-inline: 10px;
+}
+
+.culvert-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.culvert-progress-item {
+    margin-bottom: 16px;
+}
+
+.culvert-structure-list,
+.culvert-other-work-list,
+.culvert-element-list {
+    display: grid;
+    gap: 10px;
+}
+
+.culvert-structure-card {
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    background: var(--color-surface);
+    overflow: hidden;
+}
+
+.culvert-structure-card summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 13px;
+    cursor: pointer;
+    list-style: none;
+}
+
+.culvert-structure-card summary::-webkit-details-marker { display: none; }
+
+.culvert-structure-card summary > div,
+.culvert-structure-card summary small { display: grid; gap: 4px; }
+.culvert-structure-card summary span { color: var(--color-text-muted); font-size: 11px; font-weight: 800; text-transform: uppercase; }
+.culvert-structure-card summary strong { color: var(--color-progress-primary); font-size: 16px; }
+.culvert-structure-card summary small { color: var(--color-text-muted); font-size: 11px; text-align: right; }
+
+.culvert-structure-body {
+    padding: 0 13px 13px;
+    border-top: 1px solid var(--color-border);
+}
+
+.culvert-structure-body .culvert-progress-item { margin: 13px 0; }
+
+.culvert-element-card,
+.culvert-other-work-card {
+    padding: 11px;
+    border: 1px solid #e1e8ef;
+    border-radius: 8px;
+    background: var(--color-surface-soft);
+}
+
+.culvert-element-card > strong,
+.culvert-other-work-card strong { display: block; color: var(--color-primary-900); font-size: 12px; }
+.culvert-element-card > span { display: block; margin-top: 7px; color: var(--color-text-muted); font-size: 11px; }
+
+.culvert-element-card dl,
+.culvert-other-work-card dl {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px 10px;
+    margin: 10px 0 0;
+}
+
+.culvert-element-card dl div,
+.culvert-other-work-card dl div { min-width: 0; }
+.culvert-element-card dt,
+.culvert-other-work-card dt { color: var(--color-text-muted); font-size: 9px; }
+.culvert-element-card dd,
+.culvert-other-work-card dd { margin: 2px 0 0; overflow-wrap: anywhere; color: var(--color-primary-900); font-size: 11px; font-weight: 750; }
+
+.culvert-other-work-card header { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.culvert-other-work-card header span { color: var(--color-text-muted); font-size: 10px; font-weight: 750; }
+
+@media (max-width: 520px) {
+    .culvert-element-card dl,
+    .culvert-other-work-card dl { grid-template-columns: 1fr; }
+}

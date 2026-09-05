@@ -7,8 +7,11 @@ const dashboardToggle = document.getElementById("dashboard-toggle");
 let tunnelDashboardData = null;
 let tunnelProgressSummaryData = null;
 let viaductDashboardData = null;
+let culvertDashboardData = null;
 let dashboardRequestController = null;
+let culvertDashboardRequestController = null;
 let tunnelDashboardChart = null;
+let culvertDashboardChart = null;
 let dashboardActiveView = "project";
 let dashboardAssetCount = null;
 
@@ -22,6 +25,7 @@ dashboardToggle?.addEventListener("click", () => {
 
 window.addEventListener("kiad:layout-changed", () => {
     tunnelDashboardChart?.resize();
+    culvertDashboardChart?.resize();
 });
 
 window.addEventListener("kiad:assets-loaded", (event) => {
@@ -228,7 +232,7 @@ function createTunnelDashboardHeader(latestRecordDate = null) {
             <div>
                 <span class="dashboard-eyebrow">Proje Genel Durumu</span>
                 <h2 id="dashboard-title">KIAD Yönetici Özeti</h2>
-                <p>Tünel ve viyadük operasyonlarının güncel yönetici görünümü</p>
+                <p>Tünel, viyadük ve menfez operasyonlarının güncel yönetici görünümü</p>
             </div>
             <div class="dashboard-header-actions">
                 ${latestRecordDate ? `
@@ -246,7 +250,8 @@ function createDashboardNavigation(activeView) {
     const views = [
         ["project", "Proje Genel"],
         ["tunnels", "Tüneller"],
-        ["viaducts", "Viyadükler"]
+        ["viaducts", "Viyadükler"],
+        ["culverts", "Menfezler"]
     ];
 
     return `
@@ -271,6 +276,12 @@ function renderActiveDashboard() {
         renderTunnelDashboard(tunnelDashboardData, tunnelProgressSummaryData);
     } else if (dashboardActiveView === "viaducts") {
         renderViaductDashboard(viaductDashboardData);
+    } else if (dashboardActiveView === "culverts") {
+        if (culvertDashboardData) {
+            renderCulvertDashboard(culvertDashboardData);
+        } else {
+            loadCulvertDashboard();
+        }
     } else {
         dashboardActiveView = "project";
         renderProjectDashboard(
@@ -279,6 +290,279 @@ function renderActiveDashboard() {
             tunnelProgressSummaryData
         );
     }
+}
+
+async function loadCulvertDashboard(force = false) {
+    if (!dashboardContent) return;
+
+    if (!force && culvertDashboardData) {
+        renderCulvertDashboard(culvertDashboardData);
+        return;
+    }
+
+    culvertDashboardRequestController?.abort();
+    culvertDashboardRequestController = new AbortController();
+    renderCulvertDashboardLoading();
+
+    try {
+        const response = await apiFetch(`${API_BASE_URL}/api/dashboard/culverts`, {
+            signal: culvertDashboardRequestController.signal
+        });
+
+        if (!response.ok) {
+            throw new Error(`API isteği başarısız: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        if (dashboardActiveView !== "culverts") return;
+        culvertDashboardData = data;
+        renderCulvertDashboard(data);
+    } catch (error) {
+        if (isAuthSessionError(error) || error.name === "AbortError") return;
+        console.error("Menfez dashboard'u yüklenemedi:", error);
+        if (dashboardActiveView === "culverts") renderCulvertDashboardError();
+    }
+}
+
+function renderCulvertDashboardLoading() {
+    destroyTunnelDashboardChart();
+    dashboardContent.innerHTML = `
+        ${createTunnelDashboardHeader()}
+        ${createDashboardNavigation("culverts")}
+        <div class="dashboard-state"><span class="tunnel-detail-spinner" aria-hidden="true"></span><span>Menfez dashboard'u yükleniyor...</span></div>`;
+    bindTunnelDashboardCommonEvents();
+}
+
+function renderCulvertDashboardError() {
+    destroyTunnelDashboardChart();
+    dashboardContent.innerHTML = `
+        ${createTunnelDashboardHeader()}
+        ${createDashboardNavigation("culverts")}
+        <div class="dashboard-state dashboard-state-error"><strong>Menfez verileri alınamadı</strong><span>Lütfen bağlantıyı kontrol edip yeniden deneyin.</span><button class="dashboard-retry" type="button">Yeniden Dene</button></div>`;
+    bindTunnelDashboardCommonEvents();
+    dashboardContent?.querySelector(".dashboard-retry")?.addEventListener("click", () => loadCulvertDashboard(true));
+}
+
+function renderCulvertDashboard(data = {}) {
+    destroyTunnelDashboardChart();
+    const summary = data.summary ?? {};
+    const distribution = Array.isArray(data.status_distribution)
+        ? data.status_distribution
+        : [];
+    const sections = Array.isArray(data.sections) ? data.sections : [];
+    const recentCulverts = Array.isArray(data.recent_culverts)
+        ? data.recent_culverts
+        : [];
+    const recentActivity = data.recent_activity ?? {};
+
+    dashboardContent.innerHTML = `
+        ${createTunnelDashboardHeader(recentActivity.latest_activity_date)}
+        ${createDashboardNavigation("culverts")}
+        <div class="dashboard-scroll">
+            ${createDashboardCulvertKpis(summary)}
+
+            <div class="dashboard-culvert-overview-grid">
+                <section class="dashboard-card dashboard-culvert-distribution" aria-labelledby="dashboard-culvert-distribution-title">
+                    <div class="dashboard-card-heading">
+                        <div><span>Portföy Durumu</span><h3 id="dashboard-culvert-distribution-title">Durum Dağılımı</h3></div>
+                    </div>
+                    ${createDashboardCulvertDonut(summary, distribution)}
+                </section>
+
+                <section class="dashboard-card dashboard-culvert-activity" aria-labelledby="dashboard-culvert-activity-title">
+                    <div class="dashboard-card-heading">
+                        <div><span>Son 7 Gün</span><h3 id="dashboard-culvert-activity-title">Aktivite</h3></div>
+                    </div>
+                    ${createDashboardCulvertActivity(recentActivity)}
+                </section>
+            </div>
+
+            <section class="dashboard-card dashboard-culvert-sections" aria-labelledby="dashboard-culvert-sections-title">
+                <div class="dashboard-card-heading">
+                    <div><span>Proje Kesimleri</span><h3 id="dashboard-culvert-sections-title">Kesim Bazlı Menfez Durumu</h3></div>
+                    <strong>${escapeDashboardHtml(formatDashboardCount(sections.length))}</strong>
+                </div>
+                ${createDashboardCulvertSectionList(sections)}
+            </section>
+
+            <section class="dashboard-card dashboard-culvert-recent" aria-labelledby="dashboard-culvert-recent-title">
+                <div class="dashboard-card-heading">
+                    <div><span>Güncel Kayıtlar</span><h3 id="dashboard-culvert-recent-title">Son Güncellenen Menfezler</h3></div>
+                    <strong>${escapeDashboardHtml(formatDashboardCount(recentCulverts.length))}</strong>
+                </div>
+                ${createDashboardRecentCulvertList(recentCulverts)}
+            </section>
+        </div>`;
+
+    bindTunnelDashboardCommonEvents();
+    bindDashboardCulvertEvents({ sections, recentCulverts });
+    renderCulvertDashboardChart(summary, distribution);
+}
+
+function createDashboardCulvertKpis(summary = {}) {
+    const kpis = [
+        ["Toplam Menfez", formatDashboardCount(summary.total_culvert_count), "proje kapsamı"],
+        ["Devam Eden", formatDashboardCount(summary.in_progress_count), "fiziksel ilerleme bulunan"],
+        ["Tamamlanan", formatDashboardCount(summary.completed_count), "%100 tamamlanan"],
+        ["Genel İlerleme", formatDashboardPrecisePercent(summary.count_progress_percent), "tamamlanan / toplam · adet bazlı"]
+    ];
+
+    return `
+        <section class="dashboard-kpi-grid dashboard-culvert-kpis" aria-label="Menfez yönetici göstergeleri">
+            ${kpis.map(([label, value, note]) => `
+                <article class="dashboard-kpi">
+                    <span>${escapeDashboardHtml(label)}</span>
+                    <strong>${escapeDashboardHtml(value)}</strong>
+                    <small>${escapeDashboardHtml(note)}</small>
+                </article>
+            `).join("")}
+        </section>`;
+}
+
+function createDashboardCulvertDonut(summary = {}, distribution = []) {
+    const total = formatDashboardCount(summary.total_culvert_count);
+    const counts = getDashboardCulvertStatusCounts(distribution);
+
+    return `
+        <div class="dashboard-culvert-donut-layout">
+            <div class="dashboard-culvert-donut-wrap">
+                <canvas id="dashboard-culvert-status-chart" aria-label="Menfez durum dağılımı"></canvas>
+                <div class="dashboard-culvert-donut-center"><strong>${escapeDashboardHtml(total)}</strong><span>Menfez</span></div>
+            </div>
+            <dl class="dashboard-culvert-status-legend">
+                ${createDashboardCulvertLegendItem("NOT_STARTED", "Başlanmadı", counts.NOT_STARTED)}
+                ${createDashboardCulvertLegendItem("IN_PROGRESS", "Devam Ediyor", counts.IN_PROGRESS)}
+                ${createDashboardCulvertLegendItem("COMPLETED", "Tamamlandı", counts.COMPLETED)}
+            </dl>
+        </div>`;
+}
+
+function createDashboardCulvertLegendItem(status, label, value) {
+    return `<div><dt><i class="dashboard-culvert-status-dot is-${status.toLowerCase()}" aria-hidden="true"></i>${escapeDashboardHtml(label)}</dt><dd>${escapeDashboardHtml(formatDashboardCount(value))}</dd></div>`;
+}
+
+function createDashboardCulvertActivity(recentActivity = {}) {
+    const activeCount = formatDashboardCount(recentActivity.active_culvert_count);
+    const latestDate = formatDashboardDate(recentActivity.latest_activity_date);
+
+    return `
+        <div class="dashboard-culvert-activity-metrics">
+            <div><strong>${escapeDashboardHtml(activeCount)}</strong><span>menfezde aktivite kaydı</span></div>
+            <div><strong>${escapeDashboardHtml(latestDate)}</strong><span>son aktivite tarihi</span></div>
+        </div>
+        <p class="dashboard-culvert-activity-note">Son 7 gün içinde imalat tarih kaydı bulunan menfezler gösterilir.</p>`;
+}
+
+function createDashboardCulvertSectionList(sections = []) {
+    if (!sections.length) return createDashboardEmpty("Menfez kesim özeti bulunmuyor.");
+
+    return `<div class="dashboard-culvert-section-list">${sections.map((section, index) => {
+        const progress = Number(section.count_progress_percent);
+        const safeProgress = Number.isFinite(progress) ? Math.min(100, Math.max(0, progress)) : 0;
+        return `
+            <article class="dashboard-culvert-section-row" role="button" tabindex="0"
+                data-dashboard-culvert-section-index="${index}"
+                aria-label="${escapeDashboardHtml(formatDashboardCulvertValue(section.section_code))} kesimine odaklan">
+                <header>
+                    <strong>${escapeDashboardHtml(formatDashboardCulvertValue(section.section_code))}</strong>
+                    <span>${escapeDashboardHtml(formatDashboardCount(section.total_count))} menfez</span>
+                </header>
+                <dl>
+                    ${createDashboardMetric("Başlanmadı", formatDashboardCount(section.not_started_count))}
+                    ${createDashboardMetric("Devam Ediyor", formatDashboardCount(section.in_progress_count))}
+                    ${createDashboardMetric("Tamamlandı", formatDashboardCount(section.completed_count))}
+                    ${createDashboardMetric("İlerleme", formatDashboardPrecisePercent(section.count_progress_percent))}
+                </dl>
+                <div class="dashboard-culvert-section-progress" role="presentation"><span style="width: ${safeProgress}%"></span></div>
+            </article>`;
+    }).join("")}</div>`;
+}
+
+function createDashboardRecentCulvertList(items = []) {
+    if (!items.length) return createDashboardEmpty("Güncel aktivite kaydı bulunmuyor.");
+
+    return `<div class="dashboard-recent-culvert-list">${items.map((culvert) => `
+        <article class="dashboard-recent-culvert-row" role="button" tabindex="0"
+            data-dashboard-recent-culvert-id="${Number(culvert.asset_id)}"
+            aria-label="${escapeDashboardHtml(formatTunnelFallback(culvert.asset_code))} menfez detayını aç">
+            <div><span class="dashboard-asset-code">${escapeDashboardHtml(formatTunnelFallback(culvert.asset_code))}</span><strong>${escapeDashboardHtml(formatTunnelFallback(culvert.name))}</strong></div>
+            <div class="dashboard-recent-culvert-meta"><span>${escapeDashboardHtml(formatDashboardCulvertKm(culvert.km))}</span><span>${escapeDashboardHtml(formatDashboardCulvertValue(culvert.section))}</span></div>
+            <div><b>${escapeDashboardHtml(formatDashboardPrecisePercent(culvert.progress_percent))}</b><small>${escapeDashboardHtml(formatDashboardDate(culvert.latest_activity_date))}</small></div>
+        </article>
+    `).join("")}</div>`;
+}
+
+function bindDashboardCulvertEvents({ sections = [], recentCulverts = [] } = {}) {
+    const byId = new Map(recentCulverts.map((item) => [Number(item.asset_id), item]));
+    dashboardContent?.querySelectorAll("[data-dashboard-recent-culvert-id]").forEach((row) => {
+        const openCulvert = () => {
+            const assetId = Number(row.dataset.dashboardRecentCulvertId);
+            const culvert = byId.get(assetId);
+            if (!culvert) return;
+            const asset = getDashboardAsset(assetId);
+            if (typeof focusAsset === "function") focusAsset(asset ? { ...asset, ...culvert } : culvert);
+            if (typeof openCulvertDetail === "function") openCulvertDetail(assetId);
+        };
+        row.addEventListener("click", openCulvert);
+        row.addEventListener("keydown", (event) => {
+            if (event.key === "Enter" || event.key === " ") { event.preventDefault(); openCulvert(); }
+        });
+    });
+
+    dashboardContent?.querySelectorAll("[data-dashboard-culvert-section-index]").forEach((row) => {
+        const focusSection = () => {
+            const section = sections[Number(row.dataset.dashboardCulvertSectionIndex)];
+            const bbox = Array.isArray(section?.bbox) ? section.bbox.map(Number) : null;
+            if (!bbox || bbox.length !== 4 || !bbox.every(Number.isFinite) || typeof map === "undefined") return;
+            const [west, south, east, north] = bbox;
+            if (west === east && south === north) return;
+            map.fitBounds([[west, south], [east, north]], {
+                padding: { top: 90, right: 90, bottom: 90, left: 90 },
+                duration: 700,
+                maxZoom: 14
+            });
+        };
+        row.addEventListener("click", focusSection);
+        row.addEventListener("keydown", (event) => {
+            if (event.key === "Enter" || event.key === " ") { event.preventDefault(); focusSection(); }
+        });
+    });
+}
+
+function getDashboardCulvertStatusCounts(distribution = []) {
+    return distribution.reduce((counts, item) => {
+        const status = String(item?.status ?? "").toUpperCase();
+        if (Object.prototype.hasOwnProperty.call(counts, status)) {
+            counts[status] = Number(item.count) || 0;
+        }
+        return counts;
+    }, { NOT_STARTED: 0, IN_PROGRESS: 0, COMPLETED: 0 });
+}
+
+function formatDashboardCulvertDimensions(width, height) {
+    const widthNumber = Number(width);
+    const heightNumber = Number(height);
+    return Number.isFinite(widthNumber) && Number.isFinite(heightNumber)
+        ? `${widthNumber.toLocaleString("tr-TR", { maximumFractionDigits: 2 })} × ${heightNumber.toLocaleString("tr-TR", { maximumFractionDigits: 2 })} m`
+        : "-";
+}
+
+function formatDashboardCulvertKm(value) {
+    return typeof formatKilometer === "function"
+        ? formatKilometer(value) ?? "-"
+        : formatDashboardCulvertValue(value);
+}
+
+function formatDashboardCulvertMetric(value, unit) {
+    const number = Number(value);
+    return Number.isFinite(number)
+        ? `${number.toLocaleString("tr-TR", { maximumFractionDigits: 2 })} ${unit}`
+        : "-";
+}
+
+function formatDashboardCulvertValue(value) {
+    return value === null || value === undefined || value === "" ? "-" : String(value);
 }
 
 function renderProjectDashboard(tunnelData = {}, viaductData = {}, progressData = {}) {
@@ -1150,9 +1434,58 @@ function renderTunnelDashboardChart(dailyProgress) {
     });
 }
 
+function renderCulvertDashboardChart(summary = {}, distribution = []) {
+    destroyTunnelDashboardChart();
+
+    const canvas = document.getElementById("dashboard-culvert-status-chart");
+    if (!canvas || typeof Chart === "undefined") return;
+
+    const counts = getDashboardCulvertStatusCounts(distribution);
+    const styles = getComputedStyle(document.documentElement);
+    const colors = [
+        styles.getPropertyValue("--dashboard-culvert-not-started").trim() || "#cbd5e1",
+        styles.getPropertyValue("--dashboard-culvert-in-progress").trim() || "#d69232",
+        styles.getPropertyValue("--dashboard-culvert-completed").trim() || "#1a6685"
+    ];
+
+    culvertDashboardChart = new Chart(canvas, {
+        type: "doughnut",
+        data: {
+            labels: ["Başlanmadı", "Devam Ediyor", "Tamamlandı"],
+            datasets: [{
+                data: [counts.NOT_STARTED, counts.IN_PROGRESS, counts.COMPLETED],
+                backgroundColor: colors,
+                borderColor: "#ffffff",
+                borderWidth: 3,
+                hoverOffset: 3
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: "70%",
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label(context) {
+                            const value = Number(context.raw) || 0;
+                            const total = Number(summary.total_culvert_count) || 0;
+                            const percent = total ? (value / total) * 100 : 0;
+                            return `${context.label}: ${formatDashboardCount(value)} (${formatDashboardPrecisePercent(percent)})`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
 function destroyTunnelDashboardChart() {
     tunnelDashboardChart?.destroy();
     tunnelDashboardChart = null;
+    culvertDashboardChart?.destroy();
+    culvertDashboardChart = null;
 }
 
 function sortDashboardTunnels(value) {
