@@ -2,6 +2,24 @@
     z-index: 15;
 }
 
+.viaduct-itinerary-open {
+    margin-left: auto;
+    padding: 7px 10px;
+    border: 1px solid rgba(255, 255, 255, 0.34);
+    border-radius: 7px;
+    color: #fff;
+    background: rgba(255, 255, 255, 0.08);
+    font-size: 11px;
+    font-weight: 750;
+    cursor: pointer;
+}
+
+.viaduct-itinerary-open:hover,
+.viaduct-itinerary-open:focus-visible {
+    border-color: var(--color-accent);
+    background: rgba(217, 154, 43, 0.18);
+}
+
 .viaduct-kpi-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
 }

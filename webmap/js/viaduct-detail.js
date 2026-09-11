@@ -212,6 +212,10 @@ function createViaductHeader(asset = {}) {
                     <span class="tunnel-detail-status">${escapeViaductHtml(asset.status)}</span>
                 ` : ""}
             </div>
+            <button class="viaduct-itinerary-open" type="button" data-viaduct-itinerary-id="${Number(asset.asset_id) || ""}"
+                ${Number.isFinite(Number(asset.asset_id)) ? "" : "hidden"}>
+                İtinerer
+            </button>
             <button class="tunnel-detail-close" type="button" aria-label="Viyadük detayını kapat">×</button>
         </header>
     `;
@@ -381,6 +385,15 @@ function bindViaductCloseButton() {
     viaductDetailContent
         ?.querySelector(".tunnel-detail-close")
         ?.addEventListener("click", closeViaductDetailDrawer);
+
+    viaductDetailContent
+        ?.querySelector("[data-viaduct-itinerary-id]")
+        ?.addEventListener("click", (event) => {
+            const assetId = Number(event.currentTarget.dataset.viaductItineraryId);
+            if (Number.isFinite(assetId)) {
+                window.openStructureItinerary?.(assetId);
+            }
+        });
 }
 
 function bindViaductTabs() {
