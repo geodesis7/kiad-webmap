@@ -97,7 +97,7 @@ function normalizeItineraryData(source = {}) {
         structure,
         supports: [...supports].sort((a, b) => Number(a.order) - Number(b.order)),
         spans: [...spans].sort((a, b) => Number(a.order) - Number(b.order)),
-        quality: source.quality ?? source.quality_summary ?? [],
+        quality: source.data_quality?.warnings ?? source.quality ?? source.quality_summary ?? [],
         dataAsOf: source.data_as_of ?? structure.data_as_of ?? null
     };
 }
@@ -198,8 +198,19 @@ function createSupportSvg(support, index, spacing, axisY) {
         <path d="M ${x - 27} ${axisY + 130} L ${x - 19} ${axisY + height} L ${x + 19} ${axisY + height} L ${x + 27} ${axisY + 130} Z" class="itinerary-support-body" />
         <line x1="${x}" y1="${axisY}" x2="${x}" y2="${axisY + height}" class="itinerary-support-stem" />
         <text x="${x}" y="${axisY + 153}" class="itinerary-support-label">${escapeItinerary(support.code)}</text>
-        ${components.map((component, componentIndex) => createComponentSvg(component, x, axisY + 14 + componentIndex * 22, support.code)).join("")}
+        ${components.map((component, componentIndex) => createComponentSvg(component, x, getComponentY(component, axisY, componentIndex), support.code)).join("")}
     </g>`;
+}
+
+function getComponentY(component, axisY, fallbackIndex) {
+    const positions = {
+        CAP: axisY - 28,
+        BEARING_BLOCK: axisY - 8,
+        ELEVATION_BODY: axisY + 34,
+        FOUNDATION: axisY + 86,
+        PILE_GROUP: axisY + 114
+    };
+    return positions[component.type ?? component.component_type] ?? axisY + 14 + fallbackIndex * 22;
 }
 
 function createComponentSvg(component, x, y, supportCode) {
@@ -273,13 +284,23 @@ function selectItinerarySupport(id) {
     const support = itineraryData?.supports.find(item => String(item.id) === String(id));
     if (!support) return;
     itineraryContent.querySelectorAll("[data-itinerary-support-id]").forEach(node => node.classList.toggle("is-selected", node.dataset.itinerarySupportId === String(id)));
-    itineraryContent.querySelector("[data-itinerary-detail]").innerHTML = createSupportDetail(support, itineraryData);
+    const detailPanel = itineraryContent.querySelector("[data-itinerary-detail]");
+    detailPanel.innerHTML = createSupportDetail(support, itineraryData);
+    detailPanel.querySelectorAll("[data-detail-component]").forEach(node => node.addEventListener("click", () => {
+        selectItineraryComponent(findItineraryComponent(node.dataset.detailComponent));
+    }));
     itineraryContent.querySelector(`[data-itinerary-support-id="${CSS.escape(String(id))}"]`)?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
 }
 
 function selectItineraryComponent(component) {
     if (!component) return;
     itineraryContent.querySelector("[data-itinerary-detail]").innerHTML = createComponentDetail(component, itineraryData);
+}
+
+function findItineraryComponent(id) {
+    return [...(itineraryData?.supports ?? []), ...(itineraryData?.spans ?? [])]
+        .flatMap(item => orderComponents(item.components))
+        .find(component => String(component.id) === String(id));
 }
 
 function renderItineraryMetadata() {
@@ -310,15 +331,29 @@ function createSupportDetail(support, data) {
 
 function createComponentDetail(component, data) {
     const progress = component.progress ?? {};
+    const plannedQuantity = component.planned_quantity ?? progress.planned_count;
+    const completedQuantity = component.completed_quantity ?? progress.completed_count;
     return `<h3>${escapeItinerary(component.label ?? component.type ?? "Bileşen")}</h3><p class="itinerary-detail-kicker">${escapeItinerary(component.type ?? "OTHER")}</p><dl class="itinerary-detail-list">
-        ${detailRow("Durum", statusLabel(component.status))}${detailRow("Tasarım kapsamı", component.design_presence ?? component.design_state)}${detailRow("Durum nedeni", component.status_reason)}${detailRow("Başlangıç", component.actual_start)}${detailRow("Bitiş", component.actual_finish)}${detailRow("Son aktivite", component.last_activity)}${detailRow("Planlanan / tamamlanan", progress.planned_count != null ? `${progress.completed_count ?? "-"} / ${progress.planned_count}` : null)}${detailRow("Kalite", qualityText(component.quality))}${detailRow("Veri tarihi", data.dataAsOf)}</dl>`;
+        ${detailRow("Durum", statusLabel(component.status))}${detailRow("Tasarım kapsamı", formatDesignPresence(component.design_presence ?? component.design_state))}${detailRow("Durum nedeni", component.status_reason)}${detailRow("Başlangıç", component.actual_start)}${detailRow("Bitiş", component.actual_finish)}${detailRow("Son aktivite", component.last_activity)}${detailRow("Planlanan miktar", plannedQuantity == null ? null : `${plannedQuantity}${component.unit ? ` ${component.unit}` : ""}`)}${detailRow("Tamamlanan miktar", completedQuantity == null ? null : `${completedQuantity}${component.unit ? ` ${component.unit}` : ""}`)}${detailRow("İlerleme", component.progress_percent == null ? null : `${component.progress_percent}%`)}${detailRow("Kalite", qualityText(component.quality))}${detailRow("Veri tarihi", data.dataAsOf)}</dl>`;
 }
 
 function detailRow(label, value) { return value == null || value === "" ? "" : `<div><dt>${escapeItinerary(label)}</dt><dd>${escapeItinerary(String(value))}</dd></div>`; }
 function statusLabel(value) { return ITINERARY_STATUS_LABELS[String(value ?? "UNKNOWN").toUpperCase()] ?? String(value ?? "Bilinmiyor"); }
 function statusClass(value) { return `is-status-${String(value ?? "UNKNOWN").toLowerCase()}`; }
-function qualityClass(value) { const level = typeof value === "object" ? value?.level : value; return level && String(level).toUpperCase() !== "OK" ? "has-quality" : ""; }
-function qualityText(value) { if (Array.isArray(value)) return value.join(", "); if (typeof value === "object") return value?.code ?? value?.level ?? "-"; return value ?? "-"; }
+function qualityClass(value) {
+    const levels = Array.isArray(value) ? value.map(item => item?.level) : [typeof value === "object" ? value?.level : value];
+    return levels.some(level => level && String(level).toUpperCase() !== "OK") ? "has-quality" : "";
+}
+function qualityText(value) {
+    if (Array.isArray(value)) return value.map(item => typeof item === "object" ? (item.code ?? item.level) : item).filter(Boolean).join(", ") || "-";
+    if (typeof value === "object") return value?.code ?? value?.level ?? "-";
+    return value ?? "-";
+}
+function formatDesignPresence(value) {
+    if (value === true) return "Tasarımda mevcut";
+    if (value === false) return "Tasarımda yok";
+    return value ?? "-";
+}
 function formatItineraryKm(value) { return typeof formatKilometer === "function" ? formatKilometer(value) : (value ?? "-"); }
 function escapeItinerary(value) { return String(value ?? "-").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#039;"); }
 

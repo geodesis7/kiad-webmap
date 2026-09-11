@@ -32,14 +32,16 @@ document, without screen coordinates or frontend-specific SVG geometry.
       "type": "PILE_GROUP|FOUNDATION|ELEVATION_BODY|CAP|BEARING_BLOCK",
       "label": "optional canonical label",
       "design_order": 1,
-      "design_presence": "DESIGN_PRESENT_NO_PROGRESS|DESIGN_NOT_PRESENT|DESIGN_PRESENT",
+      "design_presence": "canonical design-presence value",
       "status": "UNKNOWN|NOT_STARTED|IN_PROGRESS|COMPLETED|BLOCKED|NOT_APPLICABLE",
       "status_reason": "optional canonical reason",
       "actual_start": null,
       "actual_finish": null,
       "last_activity": null,
-      "progress": { "planned_count": null, "completed_count": null },
-      "quality": { "level": "OK|WARNING|ERROR|UNVERIFIED", "code": "optional" }
+      "planned_quantity": null,
+      "unit": "optional canonical unit",
+      "progress_percent": null,
+      "quality": [{ "level": "OK|WARNING|ERROR|UNVERIFIED", "code": "optional" }]
     }]
   }],
   "spans": [{
@@ -50,6 +52,7 @@ document, without screen coordinates or frontend-specific SVG geometry.
     "to_support_id": "canonical-id",
     "components": [{ "type": "GIRDER_GROUP", "status": "UNKNOWN" }]
   }],
+  "data_quality": { "state": "OK|WARNING", "warnings": [] },
   "quality_summary": ["STAGE_DESIGN_UNVERIFIED"],
   "data_as_of": "2026-09-11"
 }
