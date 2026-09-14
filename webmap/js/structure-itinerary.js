@@ -6,6 +6,17 @@ const ITINERARY_COMPONENT_ORDER = Object.freeze([
     "PILE_GROUP", "FOUNDATION", "ELEVATION_BODY", "CAP", "BEARING_BLOCK", "GIRDER_GROUP"
 ]);
 const ITINERARY_HIDDEN_COMPONENT_TYPES = new Set(["PIER_STAGE"]);
+const ITINERARY_COMPONENT_PRESENTATION = Object.freeze({
+    PILE_GROUP: { label: "Kazıklar", kind: "piles" },
+    BLINDING_CONCRETE: { label: "Grobeton", kind: "blinding" },
+    FOUNDATION: { label: "Temel", kind: "foundation" },
+    ELEVATION_BODY: { label: "Elevasyon", kind: "elevation" },
+    CAP: { label: "Başlık Kirişi", kind: "cap" },
+    BEARING_BLOCK: { label: "Mesnet Bloğu", kind: "bearing" },
+    GIRDER_GROUP: { label: "Prekast Kirişler", kind: "girder" },
+    DECK: { label: "Tabliye Betonu", kind: "deck" },
+    DECK_SLAB: { label: "Tabliye Betonu", kind: "deck" }
+});
 const ITINERARY_STATUS_LABELS = Object.freeze({
     UNKNOWN: "Bilinmiyor", NOT_STARTED: "Başlanmadı", IN_PROGRESS: "Devam ediyor",
     COMPLETED: "Tamamlandı", BLOCKED: "Blokeli", NOT_APPLICABLE: "Uygulanmaz"
@@ -166,7 +177,7 @@ function createProvisionalIndicator(structure, data) {
 function createItinerarySvg(supports, spans) {
     const spacing = 132;
     const width = Math.max(760, (supports.length - 1) * spacing + 160);
-    const axisY = 160;
+    const axisY = 88;
     const byId = new Map(supports.map((support, index) => [String(support.id), { support, index }]));
     return `<svg class="itinerary-svg" viewBox="0 0 ${width} 340" role="img" aria-label="Yapı itinereiri">
         <line class="itinerary-axis" x1="80" y1="${axisY}" x2="${width - 80}" y2="${axisY}" />
@@ -180,46 +191,70 @@ function createSpanSvg(span, index, supports, byId, spacing, axisY) {
     const to = byId.get(String(span.to_support_id));
     const start = from ? 80 + from.index * spacing : 80 + index * spacing;
     const end = to ? 80 + to.index * spacing : start + spacing;
-    const component = orderComponents(span.components).find(c => c.type === "GIRDER_GROUP") ?? orderComponents(span.components)[0];
-    const accessibleLabel = `${span.code ?? "Span"}: ${component?.type ?? "bileşen"} ${statusLabel(component?.status)}`;
+    const components = orderComponents(span.components);
+    const component = components.find(c => c.type === "GIRDER_GROUP") ?? components[0];
+    const deck = components.find(c => ["DECK", "DECK_SLAB"].includes(c.type ?? c.component_type));
+    const componentLabel = componentPresentation(component).label;
+    const accessibleLabel = `${span.code ?? "Span"}: ${componentLabel} ${statusLabel(component?.status)}`;
     return `<g class="itinerary-span" tabindex="0" role="button" data-itinerary-component="${escapeItinerary(component?.id ?? "")}" aria-label="${escapeItinerary(accessibleLabel)}">
-        <path d="M ${start + 14} ${axisY - 12} Q ${(start + end) / 2} ${axisY - 72} ${end - 14} ${axisY - 12}" class="itinerary-span-arc ${statusClass(component?.status)}" />
-        <text x="${(start + end) / 2}" y="${axisY - 54}" class="itinerary-span-label">${escapeItinerary(span.code ?? "Span")}</text>
+        ${deck ? createSpanDeckSvg(deck, start, end, axisY) : ""}
+        <rect x="${start + 10}" y="${axisY - 18}" width="${Math.max(20, end - start - 20)}" height="15" rx="2" class="itinerary-girder-beam ${statusClass(component?.status)}" />
+        <text x="${(start + end) / 2}" y="${axisY - 28}" class="itinerary-span-label">${escapeItinerary(span.code ?? "Span")}</text>
+    </g>`;
+}
+
+function createSpanDeckSvg(component, start, end, axisY) {
+    const label = componentPresentation(component).label;
+    const width = Math.max(20, end - start - 12);
+    return `<g class="itinerary-component is-deck ${statusClass(component.status)} ${qualityClass(component.quality)}" tabindex="0" role="button" data-itinerary-component="${escapeItinerary(component.id)}" aria-label="${escapeItinerary(`${label}: ${statusLabel(component.status)}`)}">
+        <rect x="${start + 6}" y="${axisY - 42}" width="${width}" height="8" rx="1"/>
+        <text x="${(start + end) / 2}" y="${axisY - 35}" class="itinerary-component-label">${escapeItinerary(label)}</text>
     </g>`;
 }
 
 function createSupportSvg(support, index, spacing, axisY) {
     const x = 80 + index * spacing;
     const type = String(support.type ?? support.support_type ?? "OTHER").toUpperCase();
-    const height = Number(support.visual_height) > 0 ? Number(support.visual_height) : 98;
     const components = orderComponents(support.components);
     return `<g class="itinerary-support is-${type.toLowerCase()}" tabindex="0" role="button" data-itinerary-support-id="${escapeItinerary(support.id)}" aria-label="${escapeItinerary(`${support.code} ${type}`)}">
         <title>${escapeItinerary(`${support.code} · ${type}`)}</title>
-        <path d="M ${x - 27} ${axisY + 130} L ${x - 19} ${axisY + height} L ${x + 19} ${axisY + height} L ${x + 27} ${axisY + 130} Z" class="itinerary-support-body" />
-        <line x1="${x}" y1="${axisY}" x2="${x}" y2="${axisY + height}" class="itinerary-support-stem" />
-        <text x="${x}" y="${axisY + 153}" class="itinerary-support-label">${escapeItinerary(support.code)}</text>
-        ${components.map((component, componentIndex) => createComponentSvg(component, x, getComponentY(component, axisY, componentIndex), support.code)).join("")}
+        <line x1="${x}" y1="${axisY - 2}" x2="${x}" y2="${axisY + 196}" class="itinerary-support-guide" />
+        ${components.map((component, componentIndex) => createComponentSvg(component, x, axisY, componentIndex, support.code)).join("")}
+        <text x="${x}" y="${axisY + 220}" class="itinerary-support-label">${escapeItinerary(support.code)}</text>
     </g>`;
 }
 
-function getComponentY(component, axisY, fallbackIndex) {
-    const positions = {
-        CAP: axisY - 28,
-        BEARING_BLOCK: axisY - 8,
-        ELEVATION_BODY: axisY + 34,
-        FOUNDATION: axisY + 86,
-        PILE_GROUP: axisY + 114
-    };
-    return positions[component.type ?? component.component_type] ?? axisY + 14 + fallbackIndex * 22;
-}
-
-function createComponentSvg(component, x, y, supportCode) {
+function createComponentSvg(component, x, axisY, fallbackIndex, supportCode) {
     const type = component.type ?? component.component_type ?? "OTHER";
-    const accessibleLabel = `${supportCode} ${type}: ${statusLabel(component.status)}`;
-    return `<g class="itinerary-component ${statusClass(component.status)} ${qualityClass(component.quality)}" tabindex="0" role="button" data-itinerary-component="${escapeItinerary(component.id)}" aria-label="${escapeItinerary(accessibleLabel)}">
-        <rect x="${x - 48}" y="${y}" width="96" height="15" rx="3" />
-        <text x="${x}" y="${y + 11}" class="itinerary-component-label">${escapeItinerary(component.label ?? component.type ?? "Bileşen")}</text>
-    </g>`;
+    const presentation = componentPresentation(component);
+    const accessibleLabel = `${supportCode} ${presentation.label}: ${statusLabel(component.status)}`;
+    const common = `class="itinerary-component is-${presentation.kind} ${statusClass(component.status)} ${qualityClass(component.quality)}" tabindex="0" role="button" data-itinerary-component="${escapeItinerary(component.id)}" aria-label="${escapeItinerary(accessibleLabel)}"`;
+    const label = y => `<text x="${x}" y="${y}" class="itinerary-component-label">${escapeItinerary(presentation.label)}</text>`;
+    const marker = y => `<text x="${x + 48}" y="${y}" class="itinerary-status-mark">${statusMark(component.status)}</text>`;
+
+    if (presentation.kind === "piles") {
+        return `<g ${common}><line x1="${x - 22}" y1="${axisY + 168}" x2="${x - 22}" y2="${axisY + 206}"/><line x1="${x}" y1="${axisY + 168}" x2="${x}" y2="${axisY + 206}"/><line x1="${x + 22}" y1="${axisY + 168}" x2="${x + 22}" y2="${axisY + 206}"/><line x1="${x - 32}" y1="${axisY + 168}" x2="${x + 32}" y2="${axisY + 168}"/>${label(axisY + 188)}${marker(axisY + 188)}</g>`;
+    }
+    if (presentation.kind === "blinding") {
+        return `<g ${common}><rect x="${x - 46}" y="${axisY + 160}" width="92" height="8" rx="1"/>${label(axisY + 167)}${marker(axisY + 167)}</g>`;
+    }
+    if (presentation.kind === "foundation") {
+        return `<g ${common}><rect x="${x - 43}" y="${axisY + 137}" width="86" height="23" rx="2"/>${label(axisY + 152)}${marker(axisY + 152)}</g>`;
+    }
+    if (presentation.kind === "elevation") {
+        return `<g ${common}><rect x="${x - 20}" y="${axisY + 51}" width="40" height="86" rx="2"/>${label(axisY + 96)}${marker(axisY + 96)}</g>`;
+    }
+    if (presentation.kind === "cap") {
+        return `<g ${common}><rect x="${x - 48}" y="${axisY + 31}" width="96" height="20" rx="2"/>${label(axisY + 45)}${marker(axisY + 45)}</g>`;
+    }
+    if (presentation.kind === "bearing") {
+        return `<g ${common}><rect x="${x - 31}" y="${axisY + 15}" width="62" height="16" rx="2"/>${label(axisY + 27)}${marker(axisY + 27)}</g>`;
+    }
+    if (presentation.kind === "deck") {
+        return `<g ${common}><rect x="${x - 52}" y="${axisY - 4}" width="104" height="8" rx="1"/>${label(axisY + 3)}${marker(axisY + 3)}</g>`;
+    }
+    const y = axisY + 28 + fallbackIndex * 22;
+    return `<g ${common}><rect x="${x - 42}" y="${y}" width="84" height="16" rx="2"/>${label(y + 12)}${marker(y + 12)}</g>`;
 }
 
 function orderComponents(components) {
@@ -326,20 +361,28 @@ function createStructureDetail(structure, data) {
 function createSupportDetail(support, data) {
     return `<h3>${escapeItinerary(support.code)}</h3><p class="itinerary-detail-kicker">${escapeItinerary(support.type ?? support.support_type ?? "OTHER")}</p>
         <dl class="itinerary-detail-list">${detailRow("KM", formatItineraryKm(support.chainage ?? support.km))}${detailRow("Tasarım", "Geçici Tasarım Modeli")}${detailRow("Veri tarihi", data.dataAsOf)}</dl>
-        <div class="itinerary-component-list">${orderComponents(support.components).map(component => `<button type="button" data-detail-component="${escapeItinerary(component.id)}"><span>${escapeItinerary(component.label ?? component.type)}</span><strong>${escapeItinerary(statusLabel(component.status))}</strong></button>`).join("")}</div>`;
+        <div class="itinerary-component-list">${orderComponents(support.components).map(component => `<button type="button" data-detail-component="${escapeItinerary(component.id)}"><span>${escapeItinerary(componentPresentation(component).label)}</span><strong>${escapeItinerary(statusLabel(component.status))}</strong></button>`).join("")}</div>`;
 }
 
 function createComponentDetail(component, data) {
     const progress = component.progress ?? {};
     const plannedQuantity = component.planned_quantity ?? progress.planned_count;
     const completedQuantity = component.completed_quantity ?? progress.completed_count;
-    return `<h3>${escapeItinerary(component.label ?? component.type ?? "Bileşen")}</h3><p class="itinerary-detail-kicker">${escapeItinerary(component.type ?? "OTHER")}</p><dl class="itinerary-detail-list">
+    return `<h3>${escapeItinerary(componentPresentation(component).label)}</h3><p class="itinerary-detail-kicker">${escapeItinerary(component.type ?? "OTHER")}</p><dl class="itinerary-detail-list">
         ${detailRow("Durum", statusLabel(component.status))}${detailRow("Tasarım kapsamı", formatDesignPresence(component.design_presence ?? component.design_state))}${detailRow("Durum nedeni", component.status_reason)}${detailRow("Başlangıç", component.actual_start)}${detailRow("Bitiş", component.actual_finish)}${detailRow("Son aktivite", component.last_activity)}${detailRow("Planlanan miktar", plannedQuantity == null ? null : `${plannedQuantity}${component.unit ? ` ${component.unit}` : ""}`)}${detailRow("Tamamlanan miktar", completedQuantity == null ? null : `${completedQuantity}${component.unit ? ` ${component.unit}` : ""}`)}${detailRow("İlerleme", component.progress_percent == null ? null : `${component.progress_percent}%`)}${detailRow("Kalite", qualityText(component.quality))}${detailRow("Veri tarihi", data.dataAsOf)}</dl>`;
 }
 
 function detailRow(label, value) { return value == null || value === "" ? "" : `<div><dt>${escapeItinerary(label)}</dt><dd>${escapeItinerary(String(value))}</dd></div>`; }
 function statusLabel(value) { return ITINERARY_STATUS_LABELS[String(value ?? "UNKNOWN").toUpperCase()] ?? String(value ?? "Bilinmiyor"); }
 function statusClass(value) { return `is-status-${String(value ?? "UNKNOWN").toLowerCase()}`; }
+function statusMark(value) {
+    const marks = { COMPLETED: "✓", IN_PROGRESS: "●", NOT_STARTED: "–", BLOCKED: "!", NOT_APPLICABLE: "×", UNKNOWN: "?" };
+    return marks[String(value ?? "UNKNOWN").toUpperCase()] ?? "?";
+}
+function componentPresentation(component = {}) {
+    const type = String(component.type ?? component.component_type ?? "OTHER").toUpperCase();
+    return ITINERARY_COMPONENT_PRESENTATION[type] ?? { label: component.label ?? type, kind: "other" };
+}
 function qualityClass(value) {
     const levels = Array.isArray(value) ? value.map(item => item?.level) : [typeof value === "object" ? value?.level : value];
     return levels.some(level => level && String(level).toUpperCase() !== "OK") ? "has-quality" : "";
