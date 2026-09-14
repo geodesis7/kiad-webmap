@@ -33,7 +33,12 @@ window.addEventListener("popstate", () => {
 });
 
 document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape" && isStructureItineraryOpen()) closeStructureItinerary();
+    if (event.key !== "Escape" || !isStructureItineraryOpen()) return;
+    if (closeItineraryInfoPanel()) {
+        event.preventDefault();
+        return;
+    }
+    closeStructureItinerary();
 });
 
 async function openStructureItinerary(assetId) {
@@ -153,8 +158,11 @@ function renderStructureItinerary(data) {
             <div class="itinerary-canvas" tabindex="0" aria-label="Yapı support ve span ekseni">
                 <div class="itinerary-stage" data-itinerary-stage>${createItinerarySvg(supports, spans)}</div>
             </div>
-            <aside class="itinerary-detail" aria-live="polite" data-itinerary-detail>${createStructureDetail(structure, data)}</aside>
-        </div>`;
+        </div>
+        <section class="itinerary-bottom-panel" aria-live="polite" data-itinerary-panel hidden>
+            <header><span>Seçili öğe bilgisi</span><button type="button" data-itinerary-panel-close aria-label="Bilgi panelini kapat">×</button></header>
+            <div class="itinerary-detail" data-itinerary-detail></div>
+        </section>`;
     bindItineraryControls();
     bindItinerarySelections(data);
     bindItineraryPan();
@@ -279,6 +287,7 @@ function bindItineraryControls() {
     }));
     itineraryContent.querySelector("[data-itinerary-support]")?.addEventListener("change", event => selectItinerarySupport(event.target.value));
     itineraryContent.querySelector("[data-itinerary-metadata]")?.addEventListener("click", () => renderItineraryMetadata());
+    itineraryContent.querySelector("[data-itinerary-panel-close]")?.addEventListener("click", () => closeItineraryInfoPanel());
 }
 
 function bindItinerarySelections(data) {
@@ -310,17 +319,17 @@ function bindItineraryPan() {
     if (!canvas) return;
     let startX = 0; let startScroll = 0; let dragging = false;
     canvas.addEventListener("pointerdown", event => { dragging = true; startX = event.clientX; startScroll = canvas.scrollLeft; canvas.setPointerCapture(event.pointerId); });
-    canvas.addEventListener("pointermove", event => { if (dragging) canvas.scrollLeft = startScroll - (event.clientX - startX); });
+    canvas.addEventListener("pointermove", event => { if (dragging) setItineraryScrollLeft(canvas, startScroll - (event.clientX - startX)); });
     canvas.addEventListener("pointerup", () => { dragging = false; });
-    canvas.addEventListener("wheel", event => { if (Math.abs(event.deltaY) > Math.abs(event.deltaX)) { canvas.scrollLeft += event.deltaY; event.preventDefault(); } }, { passive: false });
+    canvas.addEventListener("wheel", event => { if (Math.abs(event.deltaY) > Math.abs(event.deltaX)) { setItineraryScrollLeft(canvas, canvas.scrollLeft + event.deltaY); event.preventDefault(); } }, { passive: false });
+    canvas.addEventListener("scroll", () => clampItineraryScroll(canvas));
 }
 
 function selectItinerarySupport(id) {
     const support = itineraryData?.supports.find(item => String(item.id) === String(id));
     if (!support) return;
     itineraryContent.querySelectorAll("[data-itinerary-support-id]").forEach(node => node.classList.toggle("is-selected", node.dataset.itinerarySupportId === String(id)));
-    const detailPanel = itineraryContent.querySelector("[data-itinerary-detail]");
-    detailPanel.innerHTML = createSupportDetail(support, itineraryData);
+    const detailPanel = openItineraryInfoPanel(createSupportDetail(support, itineraryData));
     detailPanel.querySelectorAll("[data-detail-component]").forEach(node => node.addEventListener("click", () => {
         selectItineraryComponent(findItineraryComponent(node.dataset.detailComponent));
     }));
@@ -329,7 +338,7 @@ function selectItinerarySupport(id) {
 
 function selectItineraryComponent(component) {
     if (!component) return;
-    itineraryContent.querySelector("[data-itinerary-detail]").innerHTML = createComponentDetail(component, itineraryData);
+    openItineraryInfoPanel(createComponentDetail(component, itineraryData));
 }
 
 function findItineraryComponent(id) {
@@ -339,12 +348,56 @@ function findItineraryComponent(id) {
 }
 
 function renderItineraryMetadata() {
-    itineraryContent.querySelector("[data-itinerary-detail]").innerHTML = createStructureDetail(itineraryData.structure, itineraryData);
+    openItineraryInfoPanel(createStructureDetail(itineraryData.structure, itineraryData));
 }
 
 function applyItineraryZoom() {
     const stage = itineraryContent.querySelector("[data-itinerary-stage]");
-    if (stage) stage.style.transform = `scale(${itineraryZoom})`;
+    if (!stage) return;
+    stage.style.transform = `scale(${itineraryZoom})`;
+    requestAnimationFrame(() => clampItineraryScroll());
+}
+
+function getItineraryScrollBounds(canvas = itineraryContent.querySelector(".itinerary-canvas")) {
+    const svg = canvas?.querySelector(".itinerary-svg");
+    if (!canvas || !svg) return { min: 0, max: 0 };
+    const canvasBox = canvas.getBoundingClientRect();
+    const svgBox = svg.getBoundingClientRect();
+    const style = getComputedStyle(canvas);
+    const leftPadding = Number.parseFloat(style.paddingLeft) || 0;
+    const rightPadding = Number.parseFloat(style.paddingRight) || 0;
+    const contentLeft = canvas.scrollLeft + svgBox.left - canvasBox.left;
+    const contentRight = contentLeft + svgBox.width;
+    return {
+        min: Math.max(0, contentLeft - leftPadding),
+        max: Math.max(0, contentRight - canvas.clientWidth + rightPadding)
+    };
+}
+
+function setItineraryScrollLeft(canvas, value) {
+    const bounds = getItineraryScrollBounds(canvas);
+    canvas.scrollLeft = Math.min(bounds.max, Math.max(bounds.min, value));
+}
+
+function clampItineraryScroll(canvas = itineraryContent.querySelector(".itinerary-canvas")) {
+    if (!canvas) return;
+    setItineraryScrollLeft(canvas, canvas.scrollLeft);
+}
+
+function openItineraryInfoPanel(content) {
+    const panel = itineraryContent.querySelector("[data-itinerary-panel]");
+    const detail = itineraryContent.querySelector("[data-itinerary-detail]");
+    if (!panel || !detail) return null;
+    detail.innerHTML = content;
+    panel.hidden = false;
+    return detail;
+}
+
+function closeItineraryInfoPanel() {
+    const panel = itineraryContent?.querySelector?.("[data-itinerary-panel]");
+    if (!panel || panel.hidden) return false;
+    panel.hidden = true;
+    return true;
 }
 
 function createStructureDetail(structure, data) {
