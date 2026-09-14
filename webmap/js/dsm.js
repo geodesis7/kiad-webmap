@@ -7,6 +7,7 @@ const DSM_LABEL_LAYER_ID = "dsm-labels";
 const DSM_LAYER_IDS = [DSM_POINT_LAYER_ID, DSM_LABEL_LAYER_ID];
 let dsmVisible = true;
 let selectedDsmSectionCodes = null;
+let dsmInteractionsBound = false;
 
 map.on("load", () => {
     addDsmLayers(map);
@@ -149,6 +150,8 @@ function focusDsmSection(mapInstance, bbox) {
 }
 
 function setupDsmInteractions(mapInstance) {
+    if (dsmInteractionsBound) return;
+    dsmInteractionsBound = true;
     mapInstance.on("mouseenter", DSM_POINT_LAYER_ID, () => {
         mapInstance.getCanvas().style.cursor = "pointer";
     });

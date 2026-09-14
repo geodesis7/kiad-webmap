@@ -224,3 +224,6 @@
         left: auto;
     }
 }
+
+.basemap-preview-openfreemap-dark { background: linear-gradient(135deg, #0c1722 0 38%, #36526a 39% 44%, #1b2e3d 45% 100%); }
+.basemap-preview-openfreemap-fiord { background: linear-gradient(135deg, #dcecf0 0 36%, #84b8c8 37% 44%, #edf5ef 45% 100%); }

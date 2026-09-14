@@ -73,6 +73,9 @@ function addAlignmentKmLayers() {
             filter: buildAlignmentKmFilter(definition.interval),
             layout: {
                 visibility: "visible",
+                // Raster temel stil ve OpenFreeMap stillerinde ortak yayımlanan font.
+                // Varsayılan Open Sans stack'i OpenFreeMap glyph endpointinde bulunmaz.
+                "text-font": ["Noto Sans Regular"],
                 "text-field": [
                     "concat",
                     "KM ",

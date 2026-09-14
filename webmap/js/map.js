@@ -13,104 +13,41 @@ const PROJECT_BOUNDS = [
     [44.80661416668261, 40.688585809429775]
 ];
 
-const BASEMAP_LAYER_IDS = [
-    "basemap-osm",
-    "basemap-satellite",
-    "basemap-terrain",
-    "basemap-esri-light"
-];
+const BASEMAP_DEFINITIONS = Object.freeze({
+    satellite: { id: "satellite", type: "raster" },
+    terrain: { id: "terrain", type: "raster" },
+    "esri-light": { id: "esri-light", type: "raster" },
+    osm: { id: "osm", type: "raster" },
+    "openfreemap-dark": { id: "openfreemap-dark", type: "vector-style", styleUrl: "https://tiles.openfreemap.org/styles/dark" },
+    "openfreemap-fiord": { id: "openfreemap-fiord", type: "vector-style", styleUrl: "https://tiles.openfreemap.org/styles/fiord" }
+});
+const BASEMAP_LAYER_IDS = Object.freeze(Object.values(BASEMAP_DEFINITIONS)
+    .filter(definition => definition.type === "raster")
+    .map(definition => `basemap-${definition.id}`));
+
+function createRasterBaseStyle() {
+    return {
+        version: 8,
+        glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
+        sources: {
+            "basemap-osm-source": { type: "raster", tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"], tileSize: 256, attribution: "&copy; OpenStreetMap contributors" },
+            "basemap-satellite-source": { type: "raster", tiles: ["https://mt0.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}"], tileSize: 256, attribution: "Tiles &copy; Google, Map data &copy" },
+            "basemap-terrain-source": { type: "raster", tiles: ["https://mt0.google.com/vt/lyrs=p&hl=en&x={x}&y={y}&z={z}"], tileSize: 256, attribution: "Tiles &copy; Google, Map data &copy" },
+            "basemap-esri-light-source": { type: "raster", tiles: ["https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}"], tileSize: 256, attribution: "&copy; Esri, HERE, Garmin, OpenStreetMap contributors, and the GIS user community" }
+        },
+        layers: BASEMAP_LAYER_IDS.map((id) => ({
+            id,
+            type: "raster",
+            source: `${id}-source`,
+            layout: { visibility: id === "basemap-satellite" ? "visible" : "none" }
+        }))
+    };
+}
 
 const map = new maplibregl.Map({
     container: "map",
 
-    style: {
-        version: 8,
-
-        glyphs:
-            "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
-
-
-        sources: {
-            "basemap-osm-source": {
-                type: "raster",
-                tiles: [
-                    "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
-                ],
-                tileSize: 256,
-                attribution: "&copy; OpenStreetMap contributors"
-            },
-
-            "basemap-satellite-source": {
-                type: "raster",
-                tiles: [
-                    "https://mt0.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}"
-                ],
-                tileSize: 256,
-                attribution:
-                    "Tiles &copy; Google, Map data &copy"
-
-            },
-
-            "basemap-terrain-source": {
-                type: "raster",
-                tiles: [
-                    "https://mt0.google.com/vt/lyrs=p&hl=en&x={x}&y={y}&z={z}"
-                ],
-                tileSize: 256,
-                attribution:
-                    "Tiles &copy; Google, Map data &copy"
-
-            },
-
-            "basemap-esri-light-source": {
-                type: "raster",
-                tiles: [
-                    "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}"
-                ],
-                tileSize: 256,
-                attribution:
-                    "&copy; Esri, HERE, Garmin, OpenStreetMap contributors, and the GIS user community"
-            }
-        },
-
-        layers: [
-            {
-                id: "basemap-osm",
-                type: "raster",
-                source: "basemap-osm-source",
-                layout: {
-                    visibility: "none"
-                }
-            },
-
-            {
-                id: "basemap-satellite",
-                type: "raster",
-                source: "basemap-satellite-source",
-                layout: {
-                    visibility: "visible"
-                }
-            },
-
-            {
-                id: "basemap-terrain",
-                type: "raster",
-                source: "basemap-terrain-source",
-                layout: {
-                    visibility: "none"
-                }
-            },
-
-            {
-                id: "basemap-esri-light",
-                type: "raster",
-                source: "basemap-esri-light-source",
-                layout: {
-                    visibility: "none"
-                }
-            }
-        ]
-    },
+    style: createRasterBaseStyle(),
 
     bounds: PROJECT_BOUNDS,
     fitBoundsOptions: {
@@ -194,6 +131,10 @@ function getProjectPadding() {
 }
 
 function setBasemap(basemapName) {
+    if (typeof window.switchKiadBasemap === "function") {
+        return window.switchKiadBasemap(basemapName);
+    }
+
     const targetLayerId = `basemap-${basemapName}`;
 
     BASEMAP_LAYER_IDS.forEach((layerId) => {
@@ -240,13 +181,11 @@ basemapOptions.forEach((option) => {
             return;
         }
 
-        setBasemap(basemapName);
-
-        basemapOptions.forEach((item) => {
-            item.classList.toggle("is-active", item === option);
+        Promise.resolve(setBasemap(basemapName)).then((didSwitch) => {
+            if (didSwitch === false) return;
+            basemapOptions.forEach((item) => item.classList.toggle("is-active", item === option));
+            setBasemapMenuState(false);
         });
-
-        setBasemapMenuState(false);
     });
 });
 
@@ -260,7 +199,8 @@ document.addEventListener("keydown", (event) => {
     }
 });
 
-map.on("load", () => {
+function ensureAssetSource() {
+    if (map.getSource("assets-source")) return;
 
     /*
      * pg_tileserv üzerinden yayınlanan public.assets
@@ -280,9 +220,19 @@ map.on("load", () => {
             40.688585809429775
         ]
 
-
-
     });
+}
+
+function rebuildBaseAssetLayers() {
+    ensureAssetSource();
+    addAssetLayers(map);
+}
+
+let assetMapInteractionsBound = false;
+
+function bindAssetMapInteractions() {
+    if (assetMapInteractionsBound) return;
+    assetMapInteractionsBound = true;
     /*
         const assetLayerToggles =
             document.querySelectorAll(
@@ -306,8 +256,6 @@ map.on("load", () => {
             });
         });
     */
-    addAssetLayers(map);
-
     /*
      * Tıklanabilir katmanlar.
      * Bu bölüm load bloğu içinde olmalı; çünkü katmanların
@@ -351,6 +299,11 @@ map.on("load", () => {
             openAssetPopup(map, properties, event.lngLat);
         });
     });
+}
+
+map.on("load", () => {
+    rebuildBaseAssetLayers();
+    bindAssetMapInteractions();
 
 
 
@@ -363,3 +316,7 @@ map.on("load", () => {
     });
     // Close the initial map "load" event handler
 });
+
+window.KIAD_BASEMAPS = BASEMAP_DEFINITIONS;
+window.createKiadRasterBaseStyle = createRasterBaseStyle;
+window.rebuildBaseAssetLayers = rebuildBaseAssetLayers;

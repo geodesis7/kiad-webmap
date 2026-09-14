@@ -95,6 +95,7 @@ function addAssetLayers(map) {
 }
 
 function addAssetPolygonLayer(map, group) {
+    if (map.getLayer(`${group.id}-polygons`)) return;
     const style = getAssetStyle(group.id);
 
     map.addLayer({
@@ -127,6 +128,7 @@ function addAssetPolygonLayer(map, group) {
 }
 
 function addAssetLineLayer(map, group) {
+    if (map.getLayer(`${group.id}-lines`)) return;
     const style = getAssetStyle(group.id);
 
     map.addLayer({
@@ -164,6 +166,7 @@ function addAssetLineLayer(map, group) {
 }
 
 function addAssetPointLayer(map, group) {
+    if (map.getLayer(`${group.id}-points`)) return;
     const style = getAssetStyle(group.id);
 
     map.addLayer({
@@ -206,6 +209,7 @@ function addAssetPointLayer(map, group) {
 }
 
 function addAssetLabelLayer(map, group) {
+    if (map.getLayer(`${group.id}-labels`)) return;
     const style = getAssetStyle(group.id);
     const label = style.label;
 

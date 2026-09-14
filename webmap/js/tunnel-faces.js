@@ -10,6 +10,7 @@ const TUNNEL_FACE_LAYER_IDS = [
 
 let selectedTunnelFaceId = null;
 let visibleTunnelFaceAssetIds = null;
+let tunnelFaceMapEventsBound = false;
 
 map.on("load", () => {
     addTunnelFaceLayers();
@@ -135,6 +136,8 @@ function addTunnelFaceLayers() {
 }
 
 function bindTunnelFaceMapEvents() {
+    if (tunnelFaceMapEventsBound) return;
+    tunnelFaceMapEventsBound = true;
     map.on("mouseenter", "tunnel-faces-points", () => {
         map.getCanvas().style.cursor = "pointer";
     });
