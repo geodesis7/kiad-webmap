@@ -304,6 +304,12 @@ function bindAssetMapInteractions() {
 map.on("load", () => {
     rebuildBaseAssetLayers();
     bindAssetMapInteractions();
+    window.KIAD_MAP_LOAD_HANDLERS?.forEach(initialize => initialize());
+
+    map.once("idle", () => {
+        window.KIAD_INITIAL_MAP_IDLE = true;
+        window.dispatchEvent(new Event("kiad:initial-map-idle"));
+    });
 
 
 

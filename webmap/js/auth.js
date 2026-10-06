@@ -5,7 +5,8 @@ const KIAD_APP_SCRIPTS = Object.freeze([
     "./js/popup.js?v=2",
     "./js/layer-styles.js?v=7",
     "./js/layers.js?v=3",
-    "./js/map.js?v=5",
+    "./js/tunnel-faces.js?v=13",
+    "./js/map.js?v=10",
     "./js/dsm.js?v=5",
     "./js/alignment-km.js?v=5",
     "./js/layer-panel.js?v=4",
@@ -15,8 +16,7 @@ const KIAD_APP_SCRIPTS = Object.freeze([
     "./js/viaduct-detail.js?v=4",
     "./js/structure-itinerary.js?v=5",
     "./js/culvert-detail.js?v=2",
-    "./js/tunnel-faces.js?v=4",
-    "./js/basemap-lifecycle.js?v=2",
+    "./js/basemap-lifecycle.js?v=10",
     "./js/tunnel-charts.js?v=2",
     "./js/dashboard.js?v=9"
 ]);
@@ -241,10 +241,14 @@ function bootstrapWebGis() {
         return appBootstrapPromise;
     }
 
+    window.KIAD_MAP_LOAD_HANDLERS ??= [];
+
     appBootstrapPromise = KIAD_APP_SCRIPTS.reduce(
         (promise, source) => promise.then(() => loadAppScript(source)),
         Promise.resolve()
-    );
+    ).then(() => {
+        window.dispatchEvent(new Event("kiad:operational-layers-ready"));
+    });
 
     return appBootstrapPromise;
 }

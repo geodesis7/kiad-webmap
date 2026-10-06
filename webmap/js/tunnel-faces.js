@@ -12,11 +12,13 @@ let selectedTunnelFaceId = null;
 let visibleTunnelFaceAssetIds = null;
 let tunnelFaceMapEventsBound = false;
 
-map.on("load", () => {
+function initializeTunnelFaceLayers() {
     addTunnelFaceLayers();
     bindTunnelFaceMapEvents();
     applyTunnelFaceAssetSelection();
-});
+}
+
+window.KIAD_MAP_LOAD_HANDLERS.push(initializeTunnelFaceLayers);
 
 window.addEventListener("kiad:asset-group-selection-changed", (event) => {
     if (event.detail?.groupId !== "tunnels") {
@@ -31,31 +33,30 @@ window.addEventListener("kiad:asset-group-selection-changed", (event) => {
 });
 
 function addTunnelFaceLayers() {
-    if (map.getSource(TUNNEL_FACE_SOURCE_ID)) {
-        return;
-    }
-
     const style = ASSET_STYLES["tunnel-faces"];
     const selected = ["boolean", ["feature-state", "selected"], false];
     const active = ["boolean", ["get", "is_active"], false];
 
-    map.addSource(TUNNEL_FACE_SOURCE_ID, {
-        type: "vector",
-        tiles: [
-            getVectorTileUrl("public.web_tunnel_face_points")
-        ],
-        minzoom: 0,
-        maxzoom: 22,
-        bounds: [
-            43.213181901707514,
-            39.65029208702538,
-            44.80661416668261,
-            40.688585809429775
-        ],
-        promoteId: "face_id"
-    });
+    if (!map.getSource(TUNNEL_FACE_SOURCE_ID)) {
+        map.addSource(TUNNEL_FACE_SOURCE_ID, {
+            type: "vector",
+            tiles: [
+                getVectorTileUrl("public.web_tunnel_face_points")
+            ],
+            minzoom: 0,
+            maxzoom: 22,
+            bounds: [
+                43.213181901707514,
+                39.65029208702538,
+                44.80661416668261,
+                40.688585809429775
+            ],
+            promoteId: "face_id"
+        });
+    }
 
-    map.addLayer({
+    if (!map.getLayer("tunnel-faces-halo")) {
+        map.addLayer({
         id: "tunnel-faces-halo",
         type: "circle",
         source: TUNNEL_FACE_SOURCE_ID,
@@ -67,9 +68,11 @@ function addTunnelFaceLayers() {
             "circle-opacity": ["case", selected, style.selected.haloOpacity, 0],
             "circle-blur": 0.25
         }
-    });
+        });
+    }
 
-    map.addLayer({
+    if (!map.getLayer("tunnel-faces-points")) {
+        map.addLayer({
         id: "tunnel-faces-points",
         type: "circle",
         source: TUNNEL_FACE_SOURCE_ID,
@@ -107,9 +110,11 @@ function addTunnelFaceLayers() {
                 style.closed.strokeWidth
             ]
         }
-    });
+        });
+    }
 
-    map.addLayer({
+    if (!map.getLayer("tunnel-faces-labels")) {
+        map.addLayer({
         id: "tunnel-faces-labels",
         type: "symbol",
         source: TUNNEL_FACE_SOURCE_ID,
@@ -132,7 +137,8 @@ function addTunnelFaceLayers() {
             "text-halo-color": style.label.haloColor,
             "text-halo-width": style.label.haloWidth
         }
-    });
+        });
+    }
 }
 
 function bindTunnelFaceMapEvents() {

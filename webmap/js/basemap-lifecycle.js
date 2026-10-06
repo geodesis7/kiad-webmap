@@ -109,3 +109,14 @@ function switchKiadBasemap(basemapId) {
 
 window.switchKiadBasemap = switchKiadBasemap;
 bindOpenFreeMapMissingImageFallback();
+
+window.addEventListener("kiad:operational-layers-ready", () => {
+    if (window.KIAD_INITIAL_MAP_IDLE) {
+        rebuildOperationalLayers();
+        return;
+    }
+
+    window.addEventListener("kiad:initial-map-idle", rebuildOperationalLayers, {
+        once: true
+    });
+}, { once: true });
