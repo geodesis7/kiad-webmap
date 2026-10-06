@@ -104,7 +104,7 @@ function switchKiadBasemap(basemapId) {
         activeBasemapKind = definition.type;
 
         if (definition.type === "vector-style") {
-            map.once("idle", () => {
+            map.once("render", () => {
                 if (generation !== basemapSwitchGeneration) return;
                 refreshTunnelFaceLayers();
             });
