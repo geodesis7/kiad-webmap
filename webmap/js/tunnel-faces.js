@@ -141,6 +141,28 @@ function addTunnelFaceLayers() {
     }
 }
 
+// Vector basemap styles replace the complete MapLibre style. Recreating this
+// source after the new style reaches idle makes its tile lifecycle independent
+// of the external basemap style's own source loading.
+function refreshTunnelFaceLayers() {
+    TUNNEL_FACE_LAYER_IDS.forEach((layerId) => {
+        if (map.getLayer(layerId)) {
+            map.removeLayer(layerId);
+        }
+    });
+
+    if (map.getSource(TUNNEL_FACE_SOURCE_ID)) {
+        map.removeSource(TUNNEL_FACE_SOURCE_ID);
+    }
+
+    addTunnelFaceLayers();
+    applyTunnelFaceAssetSelection();
+
+    if (Number.isFinite(selectedTunnelFaceId)) {
+        setSelectedTunnelFace(selectedTunnelFaceId);
+    }
+}
+
 function bindTunnelFaceMapEvents() {
     if (tunnelFaceMapEventsBound) return;
     tunnelFaceMapEventsBound = true;

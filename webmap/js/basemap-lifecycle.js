@@ -102,6 +102,13 @@ function switchKiadBasemap(basemapId) {
         map.jumpTo(viewport);
         activeKiadBasemapId = basemapId;
         activeBasemapKind = definition.type;
+
+        if (definition.type === "vector-style") {
+            map.once("idle", () => {
+                if (generation !== basemapSwitchGeneration) return;
+                refreshTunnelFaceLayers();
+            });
+        }
     });
     map.setStyle(nextStyle, { diff: false });
     return true;
