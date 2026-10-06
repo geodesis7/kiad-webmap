@@ -9,10 +9,13 @@ const tunnelDetailContent =
 let tunnelDetailRequestController = null;
 let tunnelProgressRequestController = null;
 let tunnelStagesRequestController = null;
+let tunnelForecastRequestController = null;
 let activeTunnelAssetId = null;
 let pendingTunnelDetailView = null;
 let tunnelStagesCache = null;
 let tunnelStagesLoadingAssetId = null;
+let tunnelForecastCache = null;
+let tunnelForecastLoadingAssetId = null;
 
 const tunnelDetailCache = new Map();
 const tunnelProgressCache = new Map();
@@ -59,6 +62,7 @@ async function loadTunnelDetail(assetId, options = {}) {
     }
 
     resetTunnelStagesSession();
+    resetTunnelForecastSession();
     activeTunnelAssetId = normalizedAssetId;
     showTunnelDetailDrawer();
 
@@ -69,9 +73,11 @@ async function loadTunnelDetail(assetId, options = {}) {
     tunnelDetailRequestController?.abort();
     tunnelProgressRequestController?.abort();
     tunnelStagesRequestController?.abort();
+    tunnelForecastRequestController?.abort();
 
     if (tunnelDetailCache.has(normalizedAssetId)) {
         renderTunnelDetail(tunnelDetailCache.get(normalizedAssetId));
+        loadTunnelForecast(normalizedAssetId);
         return;
     }
 
@@ -98,6 +104,7 @@ async function loadTunnelDetail(assetId, options = {}) {
 
         tunnelDetailCache.set(normalizedAssetId, tunnel);
         renderTunnelDetail(tunnel);
+        loadTunnelForecast(normalizedAssetId);
     } catch (error) {
         if (isAuthSessionError(error)) {
             return;
@@ -137,6 +144,7 @@ function closeTunnelDetailDrawer() {
     tunnelDetailRequestController?.abort();
     tunnelProgressRequestController?.abort();
     resetTunnelStagesSession();
+    resetTunnelForecastSession();
 
     if (typeof resetTunnelCharts === "function") {
         resetTunnelCharts(null);
@@ -277,6 +285,11 @@ function renderTunnelDetail(tunnel = {}) {
                     </div>
                 </section>
 
+                <section id="tunnel-forecast-section" class="tunnel-detail-section tunnel-forecast-section"
+                    aria-labelledby="tunnel-forecast-title">
+                    ${createTunnelForecastLoading()}
+                </section>
+
                 <section class="tunnel-detail-section" aria-labelledby="tunnel-info-title">
                     <h3 id="tunnel-info-title">Temel Bilgiler</h3>
                     <dl class="tunnel-info-list">
@@ -317,6 +330,10 @@ function renderTunnelDetail(tunnel = {}) {
 
     if (cachedHistory) {
         renderTunnelHistory(cachedHistory);
+    }
+
+    if (Number(asset.asset_id) === activeTunnelAssetId) {
+        renderTunnelForecast(tunnelForecastCache);
     }
 
     applyPendingTunnelDetailView();
@@ -437,6 +454,158 @@ function openTunnelDetail(assetId, options = {}) {
 
 window.openTunnelDetail = openTunnelDetail;
 window.closeTunnelDetailDrawer = closeTunnelDetailDrawer;
+
+function resetTunnelForecastSession() {
+    tunnelForecastRequestController?.abort();
+    tunnelForecastRequestController = null;
+    tunnelForecastCache = null;
+    tunnelForecastLoadingAssetId = null;
+}
+
+async function loadTunnelForecast(assetId) {
+    const normalizedAssetId = Number(assetId);
+
+    if (!Number.isFinite(normalizedAssetId) || activeTunnelAssetId !== normalizedAssetId) {
+        return;
+    }
+
+    if (tunnelForecastCache?.asset_id === normalizedAssetId) {
+        renderTunnelForecast(tunnelForecastCache);
+        return;
+    }
+
+    if (tunnelForecastLoadingAssetId === normalizedAssetId) {
+        return;
+    }
+
+    tunnelForecastRequestController?.abort();
+    tunnelForecastRequestController = new AbortController();
+    tunnelForecastLoadingAssetId = normalizedAssetId;
+    renderTunnelForecastLoading();
+
+    try {
+        const response = await apiFetch(
+            `${API_BASE_URL}/api/tunnels/${encodeURIComponent(normalizedAssetId)}/forecast`,
+            { signal: tunnelForecastRequestController.signal }
+        );
+
+        if (!response.ok) {
+            throw new Error(`Forecast API isteği başarısız: ${response.status}`);
+        }
+
+        const forecast = await response.json();
+
+        if (activeTunnelAssetId !== normalizedAssetId) {
+            return;
+        }
+
+        tunnelForecastCache = forecast;
+        renderTunnelForecast(forecast);
+    } catch (error) {
+        if (isAuthSessionError(error) || error.name === "AbortError") {
+            return;
+        }
+
+        if (activeTunnelAssetId === normalizedAssetId) {
+            console.error("Tünel tahmini yüklenemedi:", error);
+            renderTunnelForecastError();
+        }
+    } finally {
+        if (tunnelForecastLoadingAssetId === normalizedAssetId) {
+            tunnelForecastLoadingAssetId = null;
+        }
+    }
+}
+
+function renderTunnelForecastLoading() {
+    const section = tunnelDetailContent?.querySelector("#tunnel-forecast-section");
+    if (section) {
+        section.innerHTML = createTunnelForecastLoading();
+    }
+}
+
+function renderTunnelForecastError() {
+    const section = tunnelDetailContent?.querySelector("#tunnel-forecast-section");
+    if (section) {
+        section.innerHTML = `
+            <h3 id="tunnel-forecast-title">Tahmini Kazı Bitişi</h3>
+            <p class="tunnel-forecast-message is-error">Tahmin bilgisi yüklenemedi.</p>
+        `;
+    }
+}
+
+function renderTunnelForecast(forecast) {
+    const section = tunnelDetailContent?.querySelector("#tunnel-forecast-section");
+    if (!section) {
+        return;
+    }
+
+    section.innerHTML = forecast
+        ? createTunnelForecastView(forecast)
+        : createTunnelForecastLoading();
+}
+
+function createTunnelForecastLoading() {
+    return `
+        <h3 id="tunnel-forecast-title">Tahmini Kazı Bitişi</h3>
+        <p class="tunnel-forecast-message">
+            <span class="tunnel-detail-spinner" aria-hidden="true"></span>
+            Tahmin bilgisi yükleniyor...
+        </p>
+    `;
+}
+
+function createTunnelForecastView(forecast = {}) {
+    if (!isTunnelForecastAvailable(forecast)) {
+        return `
+            <h3 id="tunnel-forecast-title">Tahmini Kazı Bitişi</h3>
+            <p class="tunnel-forecast-state">${escapeTunnelDetailHtml(getTunnelForecastStateLabel(forecast))}</p>
+            ${createTunnelForecastAsOf(forecast)}
+        `;
+    }
+
+    const trend = getTunnelForecastTrend(forecast);
+    const confidence = getTunnelForecastConfidenceLabel(forecast);
+    const qualityNotes = getTunnelForecastQualityNotes(forecast);
+    const technicalNotes = getTunnelForecastTechnicalNotes(forecast);
+    const speeds = [
+        ["30 gün", forecast.v30],
+        ["60 gün", forecast.v60],
+        ["90 gün", forecast.v90]
+    ];
+
+    return `
+        <h3 id="tunnel-forecast-title">Tahmini Kazı Bitişi</h3>
+        <strong class="tunnel-forecast-date">${escapeTunnelDetailHtml(formatTunnelForecastDate(forecast.estimated_finish_date, true))}</strong>
+        <dl class="tunnel-forecast-primary">
+            ${createTunnelForecastMetric("Projeksiyon hızı", formatTunnelForecastRate(forecast.projected_rate))}
+            ${trend ? createTunnelForecastMetric("Trend", `${trend.symbol} ${trend.label}`, `Trend: ${trend.label}`) : ""}
+            ${confidence ? createTunnelForecastMetric("Güven", confidence, "Tahmin güveni, geçmiş veri uzunluğu ve ilerleme hızının kararlılığına göre belirlenir.") : ""}
+        </dl>
+        <dl class="tunnel-forecast-window-grid">
+            ${speeds.map(([label, value]) => createTunnelForecastMetric(label, formatTunnelForecastRate(value))).join("")}
+        </dl>
+        ${qualityNotes.length ? `<p class="tunnel-forecast-quality">${escapeTunnelDetailHtml(qualityNotes.join(" · "))}</p>` : ""}
+        ${technicalNotes.length ? `<p class="tunnel-forecast-technical" title="${escapeTunnelDetailHtml(technicalNotes.join(" · "))}">Veri notu</p>` : ""}
+        ${createTunnelForecastAsOf(forecast)}
+    `;
+}
+
+function createTunnelForecastMetric(label, value, description = "") {
+    return `
+        <div${description ? ` title="${escapeTunnelDetailHtml(description)}"` : ""}>
+            <dt>${escapeTunnelDetailHtml(label)}</dt>
+            <dd>${escapeTunnelDetailHtml(value)}</dd>
+        </div>
+    `;
+}
+
+function createTunnelForecastAsOf(forecast = {}) {
+    const date = formatTunnelForecastDate(forecast.data_as_of, true);
+    return date === "—"
+        ? ""
+        : `<p class="tunnel-forecast-asof">${escapeTunnelDetailHtml(`${date} verilerine göre`)}</p>`;
+}
 
 async function loadTunnelStages(assetId, force = false) {
     const normalizedAssetId = Number(assetId);

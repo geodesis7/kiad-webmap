@@ -1017,6 +1017,106 @@
     grid-column: 1 / -1;
 }
 
+.dashboard-forecast {
+    grid-column: 1 / -1;
+}
+
+.dashboard-forecast-note {
+    margin: -3px 0 14px;
+    color: var(--color-text-muted);
+    font-size: 11px;
+    line-height: 1.45;
+}
+
+.dashboard-forecast-group + .dashboard-forecast-group {
+    margin-top: 18px;
+}
+
+.dashboard-forecast-group h4 {
+    margin: 0 0 8px;
+    color: var(--color-primary-900);
+    font-size: 12px;
+}
+
+.dashboard-forecast-table-wrap {
+    overflow-x: auto;
+    border: 1px solid #e1e8ef;
+    border-radius: 9px;
+    scrollbar-width: thin;
+}
+
+.dashboard-forecast-table {
+    width: 100%;
+    min-width: 980px;
+    border-collapse: collapse;
+    font-size: 11px;
+}
+
+.dashboard-forecast-table th,
+.dashboard-forecast-table td {
+    padding: 10px 11px;
+    border-bottom: 1px solid #e8edf2;
+    text-align: left;
+    vertical-align: top;
+    white-space: nowrap;
+}
+
+.dashboard-forecast-table thead th {
+    color: var(--color-text-muted);
+    background: var(--color-surface-soft);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+}
+
+.dashboard-forecast-table tbody tr:last-child th,
+.dashboard-forecast-table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+.dashboard-forecast-row {
+    cursor: pointer;
+    transition: background var(--transition-fast);
+}
+
+.dashboard-forecast-row:hover,
+.dashboard-forecast-row:focus-visible {
+    outline: none;
+    background: #f5f8fb;
+}
+
+.dashboard-forecast-row th {
+    min-width: 136px;
+    color: var(--color-primary-900);
+}
+
+.dashboard-forecast-row th strong,
+.dashboard-forecast-row th small,
+.dashboard-forecast-row td small {
+    display: block;
+}
+
+.dashboard-forecast-row th small,
+.dashboard-forecast-row td small {
+    margin-top: 3px;
+    overflow: hidden;
+    max-width: 170px;
+    color: var(--color-text-muted);
+    font-size: 9px;
+    font-weight: 600;
+    text-overflow: ellipsis;
+}
+
+.dashboard-forecast-row.is-unavailable td {
+    color: var(--color-text-muted);
+}
+
+.dashboard-forecast-state {
+    color: var(--color-primary-800);
+    font-weight: 700;
+}
+
 .dashboard-trend,
 .dashboard-faces {
     height: 100%;

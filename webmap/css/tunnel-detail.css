@@ -244,6 +244,120 @@
     filter: saturate(1.08) brightness(1.02);
 }
 
+.tunnel-forecast-section {
+    border-color: #dbe5ed;
+    background: linear-gradient(135deg, #ffffff, #f7fafc);
+}
+
+.tunnel-forecast-section h3 {
+    margin-bottom: 8px;
+}
+
+.tunnel-forecast-date {
+    display: block;
+    color: var(--color-primary-900);
+    font-size: 20px;
+    line-height: 1.2;
+}
+
+.tunnel-forecast-primary,
+.tunnel-forecast-window-grid {
+    margin: 14px 0 0;
+}
+
+.tunnel-forecast-primary {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.tunnel-forecast-window-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    padding-top: 12px;
+    border-top: 1px solid #e5ebf0;
+}
+
+.tunnel-forecast-primary div,
+.tunnel-forecast-window-grid div {
+    min-width: 0;
+}
+
+.tunnel-forecast-primary dt,
+.tunnel-forecast-window-grid dt {
+    color: var(--color-text-muted);
+    font-size: var(--font-meta);
+    font-weight: 700;
+}
+
+.tunnel-forecast-primary dd,
+.tunnel-forecast-window-grid dd {
+    margin: 4px 0 0;
+    overflow-wrap: anywhere;
+    color: var(--color-primary-900);
+    font-size: 12px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+}
+
+.tunnel-forecast-window-grid dd {
+    color: var(--color-primary-700);
+    font-size: 11px;
+}
+
+.tunnel-forecast-message,
+.tunnel-forecast-state,
+.tunnel-forecast-quality,
+.tunnel-forecast-asof,
+.tunnel-forecast-technical {
+    margin: 0;
+    color: var(--color-text-muted);
+    font-size: 11px;
+    line-height: 1.45;
+}
+
+.tunnel-forecast-message {
+    min-height: 30px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.tunnel-forecast-message .tunnel-detail-spinner {
+    width: 16px;
+    height: 16px;
+    border-width: 2px;
+}
+
+.tunnel-forecast-message.is-error {
+    color: var(--color-danger);
+}
+
+.tunnel-forecast-state {
+    color: var(--color-primary-900);
+    font-size: 14px;
+    font-weight: 800;
+}
+
+.tunnel-forecast-quality {
+    margin-top: 11px;
+    color: #7b5b24;
+}
+
+.tunnel-forecast-technical {
+    display: inline-block;
+    margin-top: 8px;
+    padding: 3px 7px;
+    border-radius: 999px;
+    background: #edf2f6;
+    cursor: help;
+}
+
+.tunnel-forecast-asof {
+    margin-top: 11px;
+}
+
 .tunnel-info-list {
     margin: 0;
 }
@@ -873,6 +987,12 @@
 @media (max-width: 420px) {
     .tunnel-kpi-grid {
         grid-template-columns: 1fr;
+    }
+
+    .tunnel-forecast-primary,
+    .tunnel-forecast-window-grid {
+        grid-template-columns: 1fr;
+        gap: 9px;
     }
 
     .tunnel-stage-row-heading {

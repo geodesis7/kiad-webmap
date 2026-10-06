@@ -6,6 +6,7 @@ const dashboardToggle = document.getElementById("dashboard-toggle");
 
 let tunnelDashboardData = null;
 let tunnelProgressSummaryData = null;
+let tunnelForecastDashboardData = null;
 let viaductDashboardData = null;
 let culvertDashboardData = null;
 let dashboardRequestController = null;
@@ -48,7 +49,7 @@ async function openTunnelDashboard(force = false) {
         dashboardActiveView = "project";
     }
 
-    if (!force && tunnelDashboardData && tunnelProgressSummaryData && viaductDashboardData) {
+    if (!force && tunnelDashboardData && tunnelProgressSummaryData && viaductDashboardData && tunnelForecastDashboardData) {
         renderActiveDashboard();
         return;
     }
@@ -58,6 +59,23 @@ async function openTunnelDashboard(force = false) {
     renderTunnelDashboardLoading();
 
     try {
+        const forecastRequest = apiFetch(`${API_BASE_URL}/api/tunnels/forecast`, {
+            signal: dashboardRequestController.signal
+        })
+            .then(async (response) => {
+                if (!response.ok) {
+                    throw new Error(`Forecast API isteği başarısız: ${response.status}`);
+                }
+                return { status: "ready", data: await response.json() };
+            })
+            .catch((error) => {
+                if (isAuthSessionError(error) || error.name === "AbortError") {
+                    throw error;
+                }
+                console.error("Tünel forecast dashboard'u yüklenemedi:", error);
+                return { status: "error", data: null };
+            });
+
         const [tunnelResponse, progressSummaryResponse, viaductResponse] = await Promise.all([
             apiFetch(`${API_BASE_URL}/api/dashboard/tunnels`, {
                 signal: dashboardRequestController.signal
@@ -82,6 +100,7 @@ async function openTunnelDashboard(force = false) {
             progressSummaryResponse.json(),
             viaductResponse.json()
         ]);
+        tunnelForecastDashboardData = await forecastRequest;
         dashboardAssetCount = getDashboardAssetCount();
 
         if (isTunnelDashboardOpen()) {
@@ -167,7 +186,7 @@ function renderTunnelDashboardError() {
         ?.addEventListener("click", () => openTunnelDashboard(true));
 }
 
-function renderTunnelDashboard(data = {}, progressData = {}) {
+function renderTunnelDashboard(data = {}, progressData = {}, forecastResult = null) {
     const schematicTunnels = getCanonicalTunnelPortfolio(progressData, data.tunnels);
     const summary = createCanonicalTunnelSummary(schematicTunnels, data.summary);
     const activeFaces = Array.isArray(data.active_faces)
@@ -176,6 +195,7 @@ function renderTunnelDashboard(data = {}, progressData = {}) {
     const dailyProgress = Array.isArray(data.daily_progress)
         ? data.daily_progress
         : [];
+    const forecast = getDashboardForecastItems(forecastResult);
 
     dashboardContent.innerHTML = `
         ${createTunnelDashboardHeader(summary.latest_record_date)}
@@ -194,6 +214,8 @@ function renderTunnelDashboard(data = {}, progressData = {}) {
                     </div>
                     ${createDashboardTunnelList(schematicTunnels)}
                 </section>
+
+                ${createDashboardForecastPortfolio(forecast, forecastResult)}
 
                 <section class="dashboard-card dashboard-trend" aria-labelledby="dashboard-trend-title">
                     <div class="dashboard-card-heading">
@@ -221,7 +243,7 @@ function renderTunnelDashboard(data = {}, progressData = {}) {
     `;
 
     bindTunnelDashboardCommonEvents();
-    bindDashboardTunnelEvents(schematicTunnels);
+    bindDashboardTunnelEvents([...schematicTunnels, ...forecast]);
     bindDashboardFaceEvents(activeFaces);
     renderTunnelDashboardChart(dailyProgress);
 }
@@ -273,7 +295,7 @@ function renderActiveDashboard() {
     }
 
     if (dashboardActiveView === "tunnels") {
-        renderTunnelDashboard(tunnelDashboardData, tunnelProgressSummaryData);
+        renderTunnelDashboard(tunnelDashboardData, tunnelProgressSummaryData, tunnelForecastDashboardData);
     } else if (dashboardActiveView === "viaducts") {
         renderViaductDashboard(viaductDashboardData);
     } else if (dashboardActiveView === "culverts") {
@@ -1163,6 +1185,146 @@ function createDashboardTunnelList(tunnels) {
     `;
 }
 
+function getDashboardForecastItems(result) {
+    return result?.status === "ready" && Array.isArray(result.data?.items)
+        ? result.data.items
+        : [];
+}
+
+function createDashboardForecastPortfolio(forecasts, result) {
+    if (result?.status === "error") {
+        return `
+            <section class="dashboard-card dashboard-forecast" aria-labelledby="dashboard-forecast-title">
+                <div class="dashboard-card-heading">
+                    <div>
+                        <span>Tahmin</span>
+                        <h3 id="dashboard-forecast-title">Tahmini Kazı Bitişi</h3>
+                    </div>
+                </div>
+                <div class="dashboard-metric-unavailable">Tahmin bilgisi yüklenemedi.</div>
+            </section>
+        `;
+    }
+
+    const eligible = forecasts.filter((forecast) => {
+        const group = String(forecast.forecast_group ?? "").toUpperCase();
+        return group === "MAIN" || group === "SAFETY_ESCAPE";
+    });
+    const main = sortDashboardForecasts(
+        eligible.filter((forecast) => String(forecast.forecast_group ?? "").toUpperCase() === "MAIN")
+    );
+    const safetyEscape = sortDashboardForecasts(
+        eligible.filter((forecast) => String(forecast.forecast_group ?? "").toUpperCase() === "SAFETY_ESCAPE")
+    );
+
+    const groups = main.length || safetyEscape.length
+        ? `${createDashboardForecastGroup("Ana Tüneller", main)}
+           ${createDashboardForecastGroup("Emniyet / Kaçış Tünelleri", safetyEscape)}`
+        : createDashboardEmpty("Tahmin kaydı bulunan ana veya emniyet/kaçış tüneli yok.");
+
+    return `
+        <section class="dashboard-card dashboard-forecast" aria-labelledby="dashboard-forecast-title">
+            <div class="dashboard-card-heading">
+                <div>
+                    <span>Tahmin</span>
+                    <h3 id="dashboard-forecast-title">Tahmini Kazı Bitişi</h3>
+                </div>
+                <strong>${escapeDashboardHtml(String(eligible.length))}</strong>
+            </div>
+            <p class="dashboard-forecast-note">Tahmin güveni, geçmiş veri uzunluğu ve ilerleme hızının kararlılığına göre belirlenir.</p>
+            ${groups}
+        </section>
+    `;
+}
+
+function createDashboardForecastGroup(title, forecasts) {
+    if (!forecasts.length) {
+        return "";
+    }
+
+    return `
+        <section class="dashboard-forecast-group" aria-label="${escapeDashboardHtml(title)}">
+            <h4>${escapeDashboardHtml(title)}</h4>
+            <div class="dashboard-forecast-table-wrap">
+                <table class="dashboard-forecast-table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Tünel</th>
+                            <th scope="col">30 Gün</th>
+                            <th scope="col">60 Gün</th>
+                            <th scope="col">90 Gün</th>
+                            <th scope="col">Proj. Hız</th>
+                            <th scope="col">Kalan Kazı</th>
+                            <th scope="col">Tahmini Kazı Bitişi</th>
+                            <th scope="col">Trend</th>
+                            <th scope="col">Güven</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${forecasts.map(createDashboardForecastRow).join("")}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    `;
+}
+
+function createDashboardForecastRow(forecast = {}) {
+    const code = formatTunnelFallback(forecast.asset_code);
+    const name = forecast.asset_name || "";
+    const stateLabel = getTunnelForecastStateLabel(forecast);
+
+    if (!isTunnelForecastAvailable(forecast)) {
+        return `
+            <tr class="dashboard-forecast-row is-unavailable" data-dashboard-tunnel-id="${Number(forecast.asset_id)}"
+                tabindex="0" aria-label="${escapeDashboardHtml(`${code} tünel detayını aç`)}">
+                <th scope="row"><strong>${escapeDashboardHtml(code)}</strong>${name ? `<small>${escapeDashboardHtml(name)}</small>` : ""}</th>
+                <td colspan="8"><span class="dashboard-forecast-state">Tahmin: ${escapeDashboardHtml(stateLabel)}</span></td>
+            </tr>
+        `;
+    }
+
+    const trend = getTunnelForecastTrend(forecast);
+    const confidence = getTunnelForecastConfidenceLabel(forecast);
+    const notes = getTunnelForecastQualityNotes(forecast);
+    const technicalNotes = getTunnelForecastTechnicalNotes(forecast);
+    const title = technicalNotes.join(" · ");
+
+    return `
+        <tr class="dashboard-forecast-row" data-dashboard-tunnel-id="${Number(forecast.asset_id)}"
+            tabindex="0" aria-label="${escapeDashboardHtml(`${code} tünel detayını aç`)}">
+            <th scope="row"><strong>${escapeDashboardHtml(code)}</strong>${name ? `<small>${escapeDashboardHtml(name)}</small>` : ""}</th>
+            <td>${escapeDashboardHtml(formatTunnelForecastRate(forecast.v30))}</td>
+            <td>${escapeDashboardHtml(formatTunnelForecastRate(forecast.v60))}</td>
+            <td>${escapeDashboardHtml(formatTunnelForecastRate(forecast.v90))}</td>
+            <td>${escapeDashboardHtml(formatTunnelForecastRate(forecast.projected_rate))}</td>
+            <td>${escapeDashboardHtml(formatTunnelForecastMeters(forecast.remaining_excavation_m))}</td>
+            <td>${escapeDashboardHtml(formatTunnelForecastDate(forecast.estimated_finish_date))}</td>
+            <td>${escapeDashboardHtml(trend ? `${trend.symbol} ${trend.label}` : "—")}</td>
+            <td title="${escapeDashboardHtml(title)}">${escapeDashboardHtml(confidence ?? "—")}${notes.length ? `<small>${escapeDashboardHtml(notes.join(" · "))}</small>` : ""}</td>
+        </tr>
+    `;
+}
+
+function sortDashboardForecasts(forecasts) {
+    const prefixRank = (code) => {
+        const normalized = String(code ?? "").trim().toUpperCase();
+        if (/^T\d/.test(normalized)) return 0;
+        if (/^EMT/.test(normalized)) return 1;
+        if (/^KT/.test(normalized)) return 2;
+        return 3;
+    };
+
+    return [...forecasts].sort((left, right) => {
+        const rank = prefixRank(left.asset_code) - prefixRank(right.asset_code);
+        return rank || String(left.asset_code ?? "").localeCompare(
+            String(right.asset_code ?? ""),
+            "tr",
+            { numeric: true, sensitivity: "base" }
+        );
+    });
+}
+
 function createDashboardTunnelSchematic(tunnel) {
     const code = escapeDashboardHtml(formatTunnelFallback(tunnel.asset_code));
     const name = escapeDashboardHtml(formatTunnelFallback(tunnel.asset_name));
@@ -1349,7 +1511,7 @@ function bindDashboardTunnelEvents(tunnels) {
                 }
 
                 if (typeof focusAsset === "function") {
-                    focusAsset(tunnel);
+                    focusAsset(getDashboardAsset(tunnel.asset_id) ?? tunnel);
                 }
 
                 if (typeof openTunnelDetail === "function") {
