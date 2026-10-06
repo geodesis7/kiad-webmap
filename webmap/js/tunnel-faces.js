@@ -283,7 +283,7 @@ function applyTunnelFaceAssetSelection() {
     const filter = hasExplicitSelection
         ? [
             "in",
-            ["get", "asset_id"],
+            ["to-number", ["get", "asset_id"]],
             ["literal", visibleTunnelFaceAssetIds]
         ]
         : null;
