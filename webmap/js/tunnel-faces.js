@@ -121,6 +121,7 @@ function addTunnelFaceLayers() {
         "source-layer": TUNNEL_FACE_SOURCE_LAYER,
         minzoom: style.label.minZoom,
         layout: {
+            "text-font": ["Noto Sans Regular"],
             "text-field": [
                 "concat",
                 ["upcase", ["to-string", ["get", "asset_code"]]],
