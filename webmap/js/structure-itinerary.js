@@ -506,7 +506,7 @@ function formatDesignPresence(value) {
 function formatDesignState(value) {
     const normalized = String(value ?? "").toUpperCase();
     if (normalized === "AUTHORITATIVE_USER_PROJECT_CONFIRMED") return "Proje/topoloji doğrulandı";
-    if (normalized === "PROVISIONAL") return "Geçici tasarım modeli";
+    if (normalized === "PROVISIONAL" || normalized === "PENDING_AUTHORITATIVE_APPROVAL") return "Geçici tasarım modeli";
     if (normalized === "ACTIVE" || normalized === "APPROVED") return "Tasarım doğrulandı";
     return value ?? "-";
 }
