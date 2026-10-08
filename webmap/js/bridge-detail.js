@@ -165,15 +165,17 @@ function createBridgeHeader(asset = {}) {
 
 function createBridgeSupportCard(support = {}) {
     const records = Array.isArray(support.records) ? support.records : [];
-    const pileRecords = records.filter(isBridgePileRecord);
+    const pileGroupRecords = records.filter((record) => record.component_type === "PILE_GROUP");
+    const individualPileRecords = records.filter((record) => record.component_type === "PILE");
     const componentRecords = records.filter((record) => !isBridgePileRecord(record));
     const supportLabel = formatBridgeValue(support.support_code) || "Destek";
 
-    return `<details class="bridge-support-card" open>
+    return `<details class="bridge-support-card">
         <summary><div><strong>${escapeBridgeHtml(supportLabel)}</strong><span>${escapeBridgeHtml(formatBridgeCount(records.length))} imalat kaydı</span></div></summary>
         <div class="bridge-support-body">
             ${componentRecords.length ? `<section><h4>Betonarme Bileşenleri</h4><div class="bridge-component-list">${componentRecords.map(createBridgeRecordCard).join("")}</div></section>` : ""}
-            ${pileRecords.length ? `<section><h4>Kazık İlerlemesi</h4><div class="bridge-component-list">${pileRecords.map(createBridgeRecordCard).join("")}</div></section>` : ""}
+            ${pileGroupRecords.length ? `<section><h4>Kazık İlerlemesi</h4><div class="bridge-component-list">${pileGroupRecords.map(createBridgeRecordCard).join("")}</div></section>` : ""}
+            ${individualPileRecords.length ? `<details class="bridge-individual-piles"><summary>Tekil kazık kayıtları <span>${escapeBridgeHtml(formatBridgeCount(individualPileRecords.length))}</span></summary><div class="bridge-component-list">${individualPileRecords.map(createBridgeRecordCard).join("")}</div></details>` : ""}
             ${!records.length ? createBridgeEmpty("Bu destek için ilerleme kaydı bulunmuyor.") : ""}
         </div>
     </details>`;

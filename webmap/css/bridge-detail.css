@@ -69,6 +69,24 @@
     gap: 8px;
 }
 
+.bridge-individual-piles {
+    display: grid;
+    gap: 10px;
+}
+
+.bridge-individual-piles > summary {
+    cursor: pointer;
+    color: var(--text-muted, #667085);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.bridge-individual-piles > summary span {
+    margin-left: 4px;
+    color: var(--text-muted, #667085);
+    font-weight: 400;
+}
+
 .bridge-support-body h4 {
     margin: 12px 0 0;
     color: var(--text-muted, #667085);
