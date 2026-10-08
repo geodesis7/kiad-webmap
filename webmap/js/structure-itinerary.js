@@ -219,23 +219,23 @@ function createSpanSvg(span, index, supports, byId, spacing, axisY) {
     const accessibleLabel = `${span.code ?? "Span"}: ${componentLabel} ${componentStatusLabel(component)}`;
     return `<g class="itinerary-span" tabindex="0" role="button" data-itinerary-span-id="${escapeItinerary(span.id)}" aria-label="${escapeItinerary(accessibleLabel)}">
         ${deck ? createSpanDeckSvg(deck, start, end, axisY) : ""}
-        <rect x="${start + 10}" y="${axisY - 18}" width="${Math.max(20, end - start - 20)}" height="15" rx="2" class="itinerary-girder-beam ${statusClass(component?.status)}" />
+        <rect x="${start + 10}" y="${axisY - 34}" width="${Math.max(20, end - start - 20)}" height="14" rx="2" class="itinerary-girder-beam ${statusClass(component?.status)}" />
         ${createSpanGirderLabel(component, componentLabel, start, end, axisY)}
-        <text x="${(start + end) / 2}" y="${axisY - 28}" class="itinerary-span-label">${escapeItinerary(formatSpanLabel(span))}</text>
+        <text x="${(start + end) / 2}" y="${axisY - 10}" class="itinerary-span-label">${escapeItinerary(formatSpanLabel(span))}</text>
     </g>`;
 }
 
 function createSpanGirderLabel(component, label, start, end, axisY) {
     if (itineraryData?.structure?.type !== "BRIDGE" || !component) return "";
-    return `<text x="${(start + end) / 2}" y="${axisY - 7}" class="itinerary-component-label">${escapeItinerary(label)} ${escapeItinerary(statusMark(component.status))}</text>`;
+    return `<text x="${(start + end) / 2}" y="${axisY - 23}" class="itinerary-component-label">${escapeItinerary(label)} ${escapeItinerary(statusMark(component.status))}</text>`;
 }
 
 function createSpanDeckSvg(component, start, end, axisY) {
     const label = componentPresentation(component).label;
     const width = Math.max(20, end - start - 12);
     return `<g class="itinerary-component is-deck ${statusClass(component.status)} ${qualityClass(component.quality)}" tabindex="0" role="button" data-itinerary-component="${escapeItinerary(component.id)}" aria-label="${escapeItinerary(`${label}: ${componentStatusLabel(component)}`)}">
-        <rect x="${start + 6}" y="${axisY - 42}" width="${width}" height="8" rx="1"/>
-        <text x="${(start + end) / 2}" y="${axisY - 35}" class="itinerary-component-label">${escapeItinerary(label)}</text>
+        <rect x="${start + 6}" y="${axisY - 48}" width="${width}" height="8" rx="1"/>
+        <text x="${(start + end) / 2}" y="${axisY - 41}" class="itinerary-component-label">${escapeItinerary(label)}</text>
     </g>`;
 }
 
