@@ -13,6 +13,7 @@ const BRIDGE_COMPONENT_LABELS = Object.freeze({
     PIER_STAGE: "Elevasyon Kademesi",
     CAP: "Başlık Kirişi",
     BEARING_BLOCK: "Mesnet / Takoz",
+    PILE_GROUP: "Kazık Grubu",
     PILE: "Kazık"
 });
 
@@ -213,13 +214,13 @@ function getBridgeRecordSubtitle(record = {}) {
 }
 
 function isBridgePileRecord(record = {}) {
-    return record.component_type === "PILE";
+    return record.component_type === "PILE_GROUP" || record.component_type === "PILE";
 }
 
 function createBridgeQuantityRows(quantities) {
     if (!quantities || typeof quantities !== "object" || Array.isArray(quantities)) return [];
-    const planned = quantities.planned_count ?? quantities.planned_pile_count;
-    const completed = quantities.completed_count ?? quantities.completed_pile_count;
+    const planned = quantities.planned_pile_count ?? quantities.planned_count;
+    const completed = quantities.completed_pile_count ?? quantities.completed_count;
     return [
         ["Planlanan Kazık", formatBridgeCount(planned)],
         ["Tamamlanan Kazık", formatBridgeCount(completed)]
