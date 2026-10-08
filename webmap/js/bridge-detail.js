@@ -295,10 +295,10 @@ function createBridgeKpi(label, value) {
 
 function getBridgeBasicInfo(asset = {}, summary = {}) {
     return [
-        ["Kesim", asset.section ?? asset.section_code],
+        ["Kesim", asset.section_code],
         ["Başlangıç KM", formatBridgeKm(asset.km_start)],
         ["Bitiş KM", formatBridgeKm(asset.km_end)],
-        ["Uzunluk", formatBridgeLength(asset.length_m ?? asset.length)],
+        ["Uzunluk", formatBridgeLength(asset.length)],
         ["Son Aktivite", formatBridgeDate(summary.latest_activity_date ?? asset.latest_activity_date)]
     ].filter(([, value]) => hasBridgeValue(value) && value !== "—");
 }
@@ -338,9 +338,14 @@ function toBridgeFiniteNumber(value) { const numeric = Number(value); return val
 function getBridgeRatioPercent(completed, planned) { return completed === null || planned === null || planned <= 0 ? null : (completed / planned) * 100; }
 function formatBridgePercent(value) { return Number.isFinite(Number(value)) ? `%${new Intl.NumberFormat("tr-TR", { maximumFractionDigits: 2 }).format(Number(value))}` : "—"; }
 function formatBridgeCount(value) { return Number.isFinite(Number(value)) ? new Intl.NumberFormat("tr-TR", { maximumFractionDigits: 0 }).format(Number(value)) : "—"; }
-function formatBridgeDate(value) { if (!value) return "—"; const date = new Date(value); return Number.isNaN(date.valueOf()) ? "—" : new Intl.DateTimeFormat("tr-TR", { day: "numeric", month: "long", year: "numeric" }).format(date); }
+function formatBridgeDate(value) {
+    if (typeof formatPopupDate === "function") return formatPopupDate(value) ?? "—";
+    if (!value) return "—";
+    const date = new Date(value);
+    return Number.isNaN(date.valueOf()) ? "—" : new Intl.DateTimeFormat("tr-TR", { day: "numeric", month: "long", year: "numeric" }).format(date);
+}
 function formatBridgeKm(value) { return typeof formatKilometer === "function" ? formatKilometer(value) ?? "—" : formatBridgeValue(value) || "—"; }
-function formatBridgeLength(value) { const numeric = toBridgeFiniteNumber(value); return numeric === null ? "—" : `${new Intl.NumberFormat("tr-TR", { maximumFractionDigits: 2 }).format(numeric)} m`; }
+function formatBridgeLength(value) { return typeof formatLength === "function" ? (formatLength(value) ?? "—") : (toBridgeFiniteNumber(value) === null ? "—" : `${new Intl.NumberFormat("tr-TR", { maximumFractionDigits: 2 }).format(Number(value))} m`); }
 function formatBridgeValue(value) { return value === null || value === undefined || value === "" ? "" : String(value); }
 function hasBridgeValue(value) { return value !== null && value !== undefined && value !== ""; }
 function escapeBridgeHtml(value) { const element = document.createElement("div"); element.textContent = String(value ?? ""); return element.innerHTML; }
