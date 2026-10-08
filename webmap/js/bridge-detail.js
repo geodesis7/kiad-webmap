@@ -127,12 +127,9 @@ function renderBridgeDetail(data = {}) {
         ["Toplam Kazık", formatBridgeCount(metrics.piles.plannedCount)],
         ["Betonarme Kayıt", formatBridgeCount(metrics.concrete.totalCount)],
         ["Destek", formatBridgeCount(data.support_count)],
-        ["Veri Tarihi", formatBridgeDate(getLatestBridgeDate(supports))]
+        ["Veri Tarihi", formatBridgeDate(getBridgeSourceDataAsOf(supports))]
     ];
-    const basicInfo = [
-        ["Başlangıç KM", formatBridgeKm(asset.km_start)],
-        ["Bitiş KM", formatBridgeKm(asset.km_end)]
-    ].filter(([, value]) => hasBridgeValue(value) && value !== "—");
+    const basicInfo = getBridgeBasicInfo(asset, data);
 
     bridgeDetailContent.innerHTML = `
         ${createBridgeHeader(asset)}
@@ -142,7 +139,6 @@ function renderBridgeDetail(data = {}) {
                 <div class="tunnel-kpi-grid bridge-kpi-grid">
                     ${overview.map(([label, value]) => createBridgeKpi(label, value)).join("")}
                 </div>
-                ${createBridgeReferenceMeta(basicInfo)}
             </section>
             <section class="tunnel-detail-section bridge-progress-section">
                 <h3>İlerleme Göstergeleri</h3>
@@ -165,6 +161,12 @@ function renderBridgeDetail(data = {}) {
                     )}
                 </div>
             </section>
+            ${basicInfo.length ? `<section class="tunnel-detail-section">
+                <h3>Temel Bilgiler</h3>
+                <dl class="tunnel-info-list">
+                    ${basicInfo.map(([label, value]) => createBridgeInfoRow(label, value)).join("")}
+                </dl>
+            </section>` : ""}
             <section class="tunnel-detail-section">
                 <div class="bridge-section-heading"><h3>Destek ve İmalatlar</h3><span>${escapeBridgeHtml(formatBridgeCount(supports.length))} destek</span></div>
                 ${supports.length ? `<div class="bridge-support-list">${supports.map(createBridgeSupportCard).join("")}</div>` : createBridgeEmpty("Bu köprü için canonical ilerleme kaydı bulunmuyor.")}
@@ -291,9 +293,21 @@ function createBridgeKpi(label, value) {
     return `<article class="tunnel-kpi-card"><span>${escapeBridgeHtml(label)}</span><strong>${escapeBridgeHtml(value)}</strong></article>`;
 }
 
-function createBridgeReferenceMeta(items = []) {
-    if (!items.length) return "";
-    return `<div class="bridge-reference-meta">${items.map(([label, value]) => `<span><b>${escapeBridgeHtml(label)}</b>${escapeBridgeHtml(value)}</span>`).join("")}</div>`;
+function getBridgeBasicInfo(asset = {}, summary = {}) {
+    return [
+        ["Kesim", asset.section ?? asset.section_code],
+        ["Başlangıç KM", formatBridgeKm(asset.km_start)],
+        ["Bitiş KM", formatBridgeKm(asset.km_end)],
+        ["Uzunluk", formatBridgeLength(asset.length_m ?? asset.length)],
+        ["Son Aktivite", formatBridgeDate(summary.latest_activity_date ?? asset.latest_activity_date)]
+    ].filter(([, value]) => hasBridgeValue(value) && value !== "—");
+}
+
+function createBridgeInfoRow(label, value) {
+    return `<div class="tunnel-info-row">
+        <dt>${escapeBridgeHtml(label)}</dt>
+        <dd>${escapeBridgeHtml(value)}</dd>
+    </div>`;
 }
 
 function createBridgeProgress(label, ratioText, percent, note = "") {
@@ -311,13 +325,12 @@ function createBridgeEmpty(message) {
     return `<div class="tunnel-faces-empty"><span>${escapeBridgeHtml(message)}</span></div>`;
 }
 
-function getLatestBridgeDate(supports = []) {
-    const dates = supports.flatMap((support) => Array.isArray(support.records) ? support.records : [])
-        .flatMap((record) => [record.data_as_of, record.last_activity_date])
-        .filter(Boolean)
-        .map((value) => new Date(value))
-        .filter((value) => !Number.isNaN(value.valueOf()));
-    return dates.length ? new Date(Math.max(...dates.map((date) => date.valueOf()))).toISOString() : null;
+function getBridgeSourceDataAsOf(supports = []) {
+    for (const support of supports) {
+        const record = Array.isArray(support.records) ? support.records.find((item) => hasBridgeValue(item?.data_as_of)) : null;
+        if (record) return record.data_as_of;
+    }
+    return null;
 }
 
 function formatBridgeStatus(value) { return BRIDGE_STATUS_LABELS[value] ?? ""; }
@@ -327,6 +340,7 @@ function formatBridgePercent(value) { return Number.isFinite(Number(value)) ? `%
 function formatBridgeCount(value) { return Number.isFinite(Number(value)) ? new Intl.NumberFormat("tr-TR", { maximumFractionDigits: 0 }).format(Number(value)) : "—"; }
 function formatBridgeDate(value) { if (!value) return "—"; const date = new Date(value); return Number.isNaN(date.valueOf()) ? "—" : new Intl.DateTimeFormat("tr-TR", { day: "numeric", month: "long", year: "numeric" }).format(date); }
 function formatBridgeKm(value) { return typeof formatKilometer === "function" ? formatKilometer(value) ?? "—" : formatBridgeValue(value) || "—"; }
+function formatBridgeLength(value) { const numeric = toBridgeFiniteNumber(value); return numeric === null ? "—" : `${new Intl.NumberFormat("tr-TR", { maximumFractionDigits: 2 }).format(numeric)} m`; }
 function formatBridgeValue(value) { return value === null || value === undefined || value === "" ? "" : String(value); }
 function hasBridgeValue(value) { return value !== null && value !== undefined && value !== ""; }
 function escapeBridgeHtml(value) { const element = document.createElement("div"); element.textContent = String(value ?? ""); return element.innerHTML; }
