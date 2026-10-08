@@ -2,6 +2,24 @@
     gap: 14px;
 }
 
+.bridge-itinerary-open {
+    margin-left: auto;
+    padding: 7px 10px;
+    border: 1px solid rgba(255, 255, 255, 0.34);
+    border-radius: 7px;
+    color: #fff;
+    background: transparent;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.bridge-itinerary-open:hover,
+.bridge-itinerary-open:focus-visible {
+    border-color: var(--color-accent);
+    background: rgba(217, 154, 43, 0.18);
+}
+
 .bridge-kpi-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
 }

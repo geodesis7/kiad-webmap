@@ -114,7 +114,7 @@ function renderBridgeError() {
 function renderBridgeShell(asset, body) {
     if (!bridgeDetailContent) return;
     bridgeDetailContent.innerHTML = `${createBridgeHeader(asset)}${body}`;
-    bridgeDetailContent.querySelector(".tunnel-detail-close")?.addEventListener("click", closeBridgeDetailDrawer);
+    bindBridgeHeaderActions();
 }
 
 function renderBridgeDetail(data = {}) {
@@ -172,7 +172,7 @@ function renderBridgeDetail(data = {}) {
                 ${supports.length ? `<div class="bridge-support-list">${supports.map(createBridgeSupportCard).join("")}</div>` : createBridgeEmpty("Bu köprü için canonical ilerleme kaydı bulunmuyor.")}
             </section>
         </div>`;
-    bridgeDetailContent.querySelector(".tunnel-detail-close")?.addEventListener("click", closeBridgeDetailDrawer);
+    bindBridgeHeaderActions();
 }
 
 function getBridgePresentationMetrics(supports = []) {
@@ -220,7 +220,17 @@ function createBridgeHeader(asset = {}) {
         <span class="tunnel-detail-code">${escapeBridgeHtml(asset.asset_code || "Köprü")}</span>
         <h2 id="bridge-detail-title">${escapeBridgeHtml(asset.asset_name || asset.name || "Köprü Detayı")}</h2>
         <span class="tunnel-detail-status">Köprü</span>
-    </div><button class="tunnel-detail-close" type="button" aria-label="Köprü detayını kapat">×</button></header>`;
+    </div><button class="bridge-itinerary-open" type="button" data-bridge-itinerary-id="${Number(asset.asset_id) || ""}"
+        ${Number.isFinite(Number(asset.asset_id)) ? "" : "hidden"}>İtinerer</button>
+    <button class="tunnel-detail-close" type="button" aria-label="Köprü detayını kapat">×</button></header>`;
+}
+
+function bindBridgeHeaderActions() {
+    bridgeDetailContent?.querySelector(".tunnel-detail-close")?.addEventListener("click", closeBridgeDetailDrawer);
+    bridgeDetailContent?.querySelector("[data-bridge-itinerary-id]")?.addEventListener("click", (event) => {
+        const assetId = Number(event.currentTarget.dataset.bridgeItineraryId);
+        if (Number.isFinite(assetId)) window.openStructureItinerary?.(assetId, { assetKind: "bridge" });
+    });
 }
 
 function createBridgeSupportCard(support = {}) {
