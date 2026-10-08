@@ -1,0 +1,196 @@
+.bridge-detail-drawer .tunnel-detail-scroll {
+    gap: 14px;
+}
+
+.bridge-kpi-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.bridge-detail-note,
+.bridge-record-empty {
+    margin: 10px 0 0;
+    color: var(--text-muted, #667085);
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.bridge-section-heading {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.bridge-section-heading > span,
+.bridge-support-card summary span,
+.bridge-component-card header span {
+    color: var(--text-muted, #667085);
+    font-size: 12px;
+}
+
+.bridge-support-list,
+.bridge-component-list {
+    display: grid;
+    gap: 10px;
+}
+
+.bridge-support-card {
+    border: 1px solid var(--border-color, #d9e0e8);
+    border-radius: 10px;
+    background: var(--surface, #fff);
+    overflow: hidden;
+}
+
+.bridge-support-card summary {
+    display: flex;
+    align-items: center;
+    min-height: 52px;
+    padding: 0 14px;
+    cursor: pointer;
+}
+
+.bridge-support-card summary > div {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    width: 100%;
+    gap: 12px;
+}
+
+.bridge-support-body {
+    display: grid;
+    gap: 14px;
+    padding: 0 14px 14px;
+    border-top: 1px solid var(--border-color, #e5e9ef);
+}
+
+.bridge-support-body section {
+    display: grid;
+    gap: 8px;
+}
+
+.bridge-support-body h4 {
+    margin: 12px 0 0;
+    color: var(--text-muted, #667085);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+}
+
+.bridge-component-card {
+    padding: 12px;
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--surface, #fff) 92%, #edf3f8);
+}
+
+.bridge-component-card header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.bridge-component-card header > div {
+    display: grid;
+    gap: 2px;
+}
+
+.bridge-component-card header b {
+    color: var(--primary, #1a6685);
+    font-size: 14px;
+    white-space: nowrap;
+}
+
+.bridge-component-card dl {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px 14px;
+    margin: 10px 0 0;
+}
+
+.bridge-component-card dl div {
+    display: grid;
+    gap: 2px;
+}
+
+.bridge-component-card dt {
+    color: var(--text-muted, #667085);
+    font-size: 11px;
+}
+
+.bridge-component-card dd {
+    margin: 0;
+    color: var(--text, #263238);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.bridge-quality-note {
+    margin: 10px 0 0;
+    padding: 8px 10px;
+    border-left: 3px solid var(--warning, #d69232);
+    border-radius: 4px;
+    background: color-mix(in srgb, var(--warning, #d69232) 9%, transparent);
+    color: var(--text-muted, #667085);
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+.dashboard-bridge-list {
+    display: grid;
+    gap: 10px;
+}
+
+.dashboard-bridge-card {
+    display: grid;
+    grid-template-columns: minmax(130px, 1.1fr) repeat(3, minmax(90px, .7fr));
+    gap: 12px;
+    align-items: center;
+    width: 100%;
+    padding: 14px;
+    border: 1px solid var(--border-color, #d9e0e8);
+    border-radius: 10px;
+    background: var(--surface, #fff);
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: border-color .18s ease, box-shadow .18s ease;
+}
+
+.dashboard-bridge-card:hover,
+.dashboard-bridge-card:focus-visible {
+    border-color: var(--primary, #1a6685);
+    box-shadow: 0 4px 14px rgba(20, 55, 74, .1);
+    outline: none;
+}
+
+.dashboard-bridge-card > div {
+    display: grid;
+    gap: 3px;
+}
+
+.dashboard-bridge-card span,
+.dashboard-bridge-card small {
+    color: var(--text-muted, #667085);
+    font-size: 12px;
+}
+
+.dashboard-bridge-card strong {
+    color: var(--text, #263238);
+}
+
+@media (max-width: 560px) {
+    .bridge-kpi-grid,
+    .bridge-component-card dl {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .dashboard-bridge-card {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .dashboard-bridge-card > :first-child {
+        grid-column: 1 / -1;
+    }
+}

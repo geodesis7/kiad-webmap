@@ -9,8 +9,10 @@ let tunnelProgressSummaryData = null;
 let tunnelForecastDashboardData = null;
 let viaductDashboardData = null;
 let culvertDashboardData = null;
+let bridgeDashboardData = null;
 let dashboardRequestController = null;
 let culvertDashboardRequestController = null;
+let bridgeDashboardRequestController = null;
 let tunnelDashboardChart = null;
 let culvertDashboardChart = null;
 let dashboardActiveView = "project";
@@ -273,7 +275,8 @@ function createDashboardNavigation(activeView) {
         ["project", "Proje Genel"],
         ["tunnels", "Tüneller"],
         ["viaducts", "Viyadükler"],
-        ["culverts", "Menfezler"]
+        ["culverts", "Menfezler"],
+        ["bridges", "Köprüler"]
     ];
 
     return `
@@ -304,6 +307,12 @@ function renderActiveDashboard() {
         } else {
             loadCulvertDashboard();
         }
+    } else if (dashboardActiveView === "bridges") {
+        if (bridgeDashboardData) {
+            renderBridgeDashboard(bridgeDashboardData);
+        } else {
+            loadBridgeDashboard();
+        }
     } else {
         dashboardActiveView = "project";
         renderProjectDashboard(
@@ -312,6 +321,105 @@ function renderActiveDashboard() {
             tunnelProgressSummaryData
         );
     }
+}
+
+async function loadBridgeDashboard(force = false) {
+    if (!dashboardContent) return;
+
+    if (!force && bridgeDashboardData) {
+        renderBridgeDashboard(bridgeDashboardData);
+        return;
+    }
+
+    bridgeDashboardRequestController?.abort();
+    bridgeDashboardRequestController = new AbortController();
+    renderBridgeDashboardLoading();
+
+    try {
+        const response = await apiFetch(`${API_BASE_URL}/api/bridges`, {
+            signal: bridgeDashboardRequestController.signal
+        });
+        if (!response.ok) throw new Error(`API isteği başarısız: ${response.status}`);
+
+        const data = await response.json();
+        bridgeDashboardData = data;
+        if (dashboardActiveView === "bridges") renderBridgeDashboard(data);
+    } catch (error) {
+        if (isAuthSessionError(error) || error.name === "AbortError") return;
+        console.error("Köprü dashboard'u yüklenemedi:", error);
+        if (dashboardActiveView === "bridges") renderBridgeDashboardError();
+    }
+}
+
+function renderBridgeDashboardLoading() {
+    dashboardContent.innerHTML = `
+        ${createTunnelDashboardHeader()}
+        ${createDashboardNavigation("bridges")}
+        <div class="dashboard-state"><span class="tunnel-detail-spinner" aria-hidden="true"></span><span>Köprü dashboard'u yükleniyor...</span></div>`;
+    bindTunnelDashboardCommonEvents();
+}
+
+function renderBridgeDashboardError() {
+    dashboardContent.innerHTML = `
+        ${createTunnelDashboardHeader()}
+        ${createDashboardNavigation("bridges")}
+        <div class="dashboard-state dashboard-state-error"><strong>Köprü verileri alınamadı</strong><span>Lütfen bağlantıyı kontrol edip yeniden deneyin.</span><button class="dashboard-retry" type="button">Yeniden Dene</button></div>`;
+    bindTunnelDashboardCommonEvents();
+    dashboardContent.querySelector(".dashboard-retry")?.addEventListener("click", () => loadBridgeDashboard(true));
+}
+
+function renderBridgeDashboard(data = {}) {
+    const bridges = Array.isArray(data.bridges) ? data.bridges : [];
+    const latestData = getLatestDashboardDate(...bridges.map((bridge) => bridge.data_as_of || bridge.last_activity_date));
+
+    dashboardContent.innerHTML = `
+        ${createTunnelDashboardHeader(latestData)}
+        ${createDashboardNavigation("bridges")}
+        <div class="dashboard-scroll">
+            <section class="dashboard-kpi-grid" aria-label="Köprü yönetici göstergeleri">
+                <article class="dashboard-kpi"><span>Toplam Köprü</span><strong>${escapeDashboardHtml(formatDashboardCount(data.count ?? bridges.length))}</strong><small>canonical ilerleme kaydı bulunan</small></article>
+                <article class="dashboard-kpi"><span>Toplam Destek</span><strong>${escapeDashboardHtml(formatDashboardCount(bridges.reduce((sum, bridge) => sum + (Number(bridge.support_count) || 0), 0)))}</strong><small>toplu API özeti</small></article>
+                <article class="dashboard-kpi"><span>Son Veri</span><strong>${escapeDashboardHtml(formatDashboardDate(latestData))}</strong><small>kaynak güncellemesi</small></article>
+            </section>
+            <section class="dashboard-card" aria-labelledby="dashboard-bridges-title">
+                <div class="dashboard-card-heading"><div><span>Köprü Portföyü</span><h3 id="dashboard-bridges-title">Köprü İlerleme Kayıtları</h3></div><strong>${escapeDashboardHtml(formatDashboardCount(bridges.length))}</strong></div>
+                <p class="bridge-detail-note">Betonarme ve kazık ilerleme detayları, canonical değerleri korumak için seçilen köprünün detayında gösterilir.</p>
+                ${createDashboardBridgeList(bridges)}
+            </section>
+        </div>`;
+    bindTunnelDashboardCommonEvents();
+    bindDashboardBridgeEvents(bridges);
+}
+
+function createDashboardBridgeList(bridges) {
+    if (!bridges.length) return createDashboardEmpty("Canonical köprü ilerleme kaydı bulunmuyor.");
+    return `<div class="dashboard-bridge-list">${bridges.map((bridge) => `
+        <button class="dashboard-bridge-card" type="button" data-dashboard-bridge-id="${Number(bridge.asset_id)}" aria-label="${escapeDashboardHtml(formatTunnelFallback(bridge.asset_code))} köprü detayını aç">
+            <div><span class="dashboard-asset-code">${escapeDashboardHtml(formatTunnelFallback(bridge.asset_code))}</span><strong>${escapeDashboardHtml(formatTunnelFallback(bridge.name || bridge.asset_name))}</strong><small>${escapeDashboardHtml(formatDashboardBridgeKm(bridge.km_start, bridge.km_end))}</small></div>
+            <div><span>Destek</span><strong>${escapeDashboardHtml(formatDashboardCount(bridge.support_count))}</strong></div>
+            <div><span>İmalat Kaydı</span><strong>${escapeDashboardHtml(formatDashboardCount(bridge.record_count))}</strong></div>
+            <div><span>Güncel Durum</span><strong>${escapeDashboardHtml(formatDashboardDate(bridge.last_activity_date || bridge.data_as_of))}</strong></div>
+        </button>`).join("")}</div>`;
+}
+
+function bindDashboardBridgeEvents(bridges) {
+    const bridgesById = new Map(bridges.map((bridge) => [Number(bridge.asset_id), bridge]));
+    dashboardContent?.querySelectorAll("[data-dashboard-bridge-id]").forEach((row) => {
+        row.addEventListener("click", () => {
+            const assetId = Number(row.dataset.dashboardBridgeId);
+            const bridge = bridgesById.get(assetId);
+            if (!bridge) return;
+            const asset = getDashboardAsset(assetId);
+            if (typeof focusAsset === "function") focusAsset(asset ? { ...asset, ...bridge } : bridge);
+            if (typeof openBridgeDetail === "function") openBridgeDetail(assetId);
+        });
+    });
+}
+
+function formatDashboardBridgeKm(start, end) {
+    const startValue = typeof formatKilometer === "function" ? formatKilometer(start) : formatTunnelFallback(start);
+    const endValue = typeof formatKilometer === "function" ? formatKilometer(end) : formatTunnelFallback(end);
+    return startValue && endValue ? `${startValue} – ${endValue}` : startValue || endValue || "KM bilgisi yok";
 }
 
 async function loadCulvertDashboard(force = false) {

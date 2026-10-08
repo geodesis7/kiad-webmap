@@ -375,7 +375,8 @@ function createAssetDetailAction(properties = {}) {
     return [
         createTunnelDetailAction(properties),
         createViaductDetailAction(properties),
-        createCulvertDetailAction(properties)
+        createCulvertDetailAction(properties),
+        createBridgeDetailAction(properties)
     ].filter(Boolean).join("");
 }
 
@@ -445,6 +446,24 @@ function createCulvertDetailAction(properties = {}) {
     `;
 }
 
+function createBridgeDetailAction(properties = {}) {
+    const typeId = toFiniteNumber(properties.type_id);
+    const assetId = toFiniteNumber(properties.asset_id);
+
+    if (typeId !== 6 || assetId === null) {
+        return "";
+    }
+
+    return `
+        <footer class="asset-popup-actions">
+            <button class="tunnel-detail-button" type="button"
+                data-popup-action="open-bridge-detail">
+                Köprü Detayını Aç
+            </button>
+        </footer>
+    `;
+}
+
 /**
  * Popup içindeki aksiyonları ilgili varlığa bağlar.
  *
@@ -471,6 +490,13 @@ function bindPopupActions(popup, properties = {}) {
         ?.querySelector('[data-popup-action="open-culvert-detail"]')
         ?.addEventListener("click", () => {
             openCulvertDetailDrawer(properties.asset_id);
+        });
+
+    popup
+        .getElement()
+        ?.querySelector('[data-popup-action="open-bridge-detail"]')
+        ?.addEventListener("click", () => {
+            openBridgeDetailDrawer(properties.asset_id);
         });
 }
 
@@ -521,6 +547,20 @@ function openCulvertDetailDrawer(assetId) {
 
     window.dispatchEvent(
         new CustomEvent("kiad:culvert-detail-open", {
+            detail: { assetId: normalizedAssetId }
+        })
+    );
+}
+
+function openBridgeDetailDrawer(assetId) {
+    const normalizedAssetId = toFiniteNumber(assetId);
+
+    if (normalizedAssetId === null) {
+        return;
+    }
+
+    window.dispatchEvent(
+        new CustomEvent("kiad:bridge-detail-open", {
             detail: { assetId: normalizedAssetId }
         })
     );

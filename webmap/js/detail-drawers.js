@@ -3,7 +3,8 @@
 const DETAIL_DRAWER_TYPES = Object.freeze([
     "tunnel",
     "viaduct",
-    "culvert"
+    "culvert",
+    "bridge"
 ]);
 
 /**
@@ -19,7 +20,8 @@ function closeAllDetailDrawers(exceptType = null) {
     const closeHandlers = {
         tunnel: window.closeTunnelDetailDrawer,
         viaduct: window.closeViaductDetailDrawer,
-        culvert: window.closeCulvertDetailDrawer
+        culvert: window.closeCulvertDetailDrawer,
+        bridge: window.closeBridgeDetailDrawer
     };
 
     DETAIL_DRAWER_TYPES.forEach((type) => {
