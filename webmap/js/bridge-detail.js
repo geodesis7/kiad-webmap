@@ -122,9 +122,11 @@ function renderBridgeDetail(data = {}) {
 
     const asset = data.asset ?? {};
     const supports = Array.isArray(data.supports) ? data.supports : [];
+    const metrics = getBridgePresentationMetrics(supports);
     const overview = [
+        ["Toplam Kazık", formatBridgeCount(metrics.piles.plannedCount)],
+        ["Betonarme Kayıt", formatBridgeCount(metrics.concrete.totalCount)],
         ["Destek", formatBridgeCount(data.support_count)],
-        ["İmalat Kaydı", formatBridgeCount(data.record_count)],
         ["Veri Tarihi", formatBridgeDate(getLatestBridgeDate(supports))]
     ];
     const basicInfo = [
@@ -135,24 +137,80 @@ function renderBridgeDetail(data = {}) {
     bridgeDetailContent.innerHTML = `
         ${createBridgeHeader(asset)}
         <div class="tunnel-detail-scroll bridge-detail-scroll">
-            <section class="tunnel-detail-section">
-                <h3>İlerleme Özeti</h3>
+            <section class="tunnel-detail-section bridge-summary-section">
+                <h3>Operasyon Özeti</h3>
                 <div class="tunnel-kpi-grid bridge-kpi-grid">
                     ${overview.map(([label, value]) => createBridgeKpi(label, value)).join("")}
                 </div>
-                <p class="bridge-detail-note">Yüzdeler ve durumlar yalnızca canonical ilerleme kayıtlarında bulunan değerlerle gösterilir.</p>
+                ${createBridgeReferenceMeta(basicInfo)}
             </section>
-            ${basicInfo.length ? `
-                <section class="tunnel-detail-section">
-                    <h3>Temel Bilgiler</h3>
-                    <dl class="tunnel-info-list">${basicInfo.map(([label, value]) => createBridgeInfo(label, value)).join("")}</dl>
-                </section>` : ""}
+            <section class="tunnel-detail-section bridge-progress-section">
+                <h3>İlerleme Göstergeleri</h3>
+                <div class="bridge-progress-list">
+                    ${createBridgeProgress(
+                        "Kazık Adet İlerlemesi",
+                        metrics.piles.hasReliableCounts
+                            ? `${formatBridgeCount(metrics.piles.completedCount)} / ${formatBridgeCount(metrics.piles.plannedCount)} kazık`
+                            : "Planlı ve tamamlanan kazık adedi bulunmuyor",
+                        metrics.piles.percent,
+                        metrics.piles.hasReliableCounts ? "Canonical kazık grup kayıtları" : "Veri yok"
+                    )}
+                    ${createBridgeProgress(
+                        "Betonarme İlerlemesi",
+                        metrics.concrete.totalCount !== null
+                            ? `${formatBridgeCount(metrics.concrete.completedCount)} / ${formatBridgeCount(metrics.concrete.totalCount)} kayıt tamamlandı`
+                            : "Betonarme kayıtları bulunmuyor",
+                        metrics.concrete.percent,
+                        metrics.concrete.totalCount !== null ? "Kayıt bazlı tamamlanma" : "Veri yok"
+                    )}
+                </div>
+            </section>
             <section class="tunnel-detail-section">
                 <div class="bridge-section-heading"><h3>Destek ve İmalatlar</h3><span>${escapeBridgeHtml(formatBridgeCount(supports.length))} destek</span></div>
                 ${supports.length ? `<div class="bridge-support-list">${supports.map(createBridgeSupportCard).join("")}</div>` : createBridgeEmpty("Bu köprü için canonical ilerleme kaydı bulunmuyor.")}
             </section>
         </div>`;
     bridgeDetailContent.querySelector(".tunnel-detail-close")?.addEventListener("click", closeBridgeDetailDrawer);
+}
+
+function getBridgePresentationMetrics(supports = []) {
+    const records = supports.flatMap((support) => Array.isArray(support.records) ? support.records : []);
+    const pileGroups = records.filter((record) => record.component_type === "PILE_GROUP");
+    const concreteRecords = records.filter((record) => !isBridgePileRecord(record));
+    const pileCounts = pileGroups.map((record) => {
+        const quantities = record.quantities && typeof record.quantities === "object" ? record.quantities : {};
+        return {
+            planned: toBridgeFiniteNumber(quantities.planned_pile_count ?? quantities.planned_count),
+            completed: toBridgeFiniteNumber(quantities.completed_pile_count ?? quantities.completed_count)
+        };
+    });
+    const hasReliablePileCounts = pileCounts.length > 0 && pileCounts.every(
+        ({ planned, completed }) => planned !== null && completed !== null && planned >= 0 && completed >= 0
+    );
+    const plannedCount = hasReliablePileCounts
+        ? pileCounts.reduce((sum, value) => sum + value.planned, 0)
+        : null;
+    const completedCount = hasReliablePileCounts
+        ? pileCounts.reduce((sum, value) => sum + value.completed, 0)
+        : null;
+    const concreteTotalCount = concreteRecords.length || null;
+    const concreteCompletedCount = concreteTotalCount === null
+        ? null
+        : concreteRecords.filter((record) => record.canonical_status === "COMPLETED").length;
+
+    return {
+        piles: {
+            hasReliableCounts: hasReliablePileCounts && plannedCount > 0,
+            plannedCount,
+            completedCount,
+            percent: getBridgeRatioPercent(completedCount, plannedCount)
+        },
+        concrete: {
+            totalCount: concreteTotalCount,
+            completedCount: concreteCompletedCount,
+            percent: getBridgeRatioPercent(concreteCompletedCount, concreteTotalCount)
+        }
+    };
 }
 
 function createBridgeHeader(asset = {}) {
@@ -233,8 +291,20 @@ function createBridgeKpi(label, value) {
     return `<article class="tunnel-kpi-card"><span>${escapeBridgeHtml(label)}</span><strong>${escapeBridgeHtml(value)}</strong></article>`;
 }
 
-function createBridgeInfo(label, value) {
-    return `<div><dt>${escapeBridgeHtml(label)}</dt><dd>${escapeBridgeHtml(value)}</dd></div>`;
+function createBridgeReferenceMeta(items = []) {
+    if (!items.length) return "";
+    return `<div class="bridge-reference-meta">${items.map(([label, value]) => `<span><b>${escapeBridgeHtml(label)}</b>${escapeBridgeHtml(value)}</span>`).join("")}</div>`;
+}
+
+function createBridgeProgress(label, ratioText, percent, note = "") {
+    const value = toBridgeFiniteNumber(percent);
+    const hasPercent = value !== null;
+    const width = Math.min(100, Math.max(0, value ?? 0));
+    return `<div class="bridge-progress-item">
+        <div class="bridge-progress-heading"><div><strong>${escapeBridgeHtml(label)}</strong><span>${escapeBridgeHtml(ratioText)}</span></div><b>${hasPercent ? escapeBridgeHtml(formatBridgePercent(value)) : "—"}</b></div>
+        <div class="bridge-progress-track" role="progressbar" aria-label="${escapeBridgeHtml(label)}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${value ?? 0}"><span style="width: ${width}%"></span></div>
+        ${note ? `<small class="bridge-progress-note">${escapeBridgeHtml(note)}</small>` : ""}
+    </div>`;
 }
 
 function createBridgeEmpty(message) {
@@ -251,6 +321,8 @@ function getLatestBridgeDate(supports = []) {
 }
 
 function formatBridgeStatus(value) { return BRIDGE_STATUS_LABELS[value] ?? ""; }
+function toBridgeFiniteNumber(value) { const numeric = Number(value); return value === null || value === undefined || value === "" || !Number.isFinite(numeric) ? null : numeric; }
+function getBridgeRatioPercent(completed, planned) { return completed === null || planned === null || planned <= 0 ? null : (completed / planned) * 100; }
 function formatBridgePercent(value) { return Number.isFinite(Number(value)) ? `%${new Intl.NumberFormat("tr-TR", { maximumFractionDigits: 2 }).format(Number(value))}` : "—"; }
 function formatBridgeCount(value) { return Number.isFinite(Number(value)) ? new Intl.NumberFormat("tr-TR", { maximumFractionDigits: 0 }).format(Number(value)) : "—"; }
 function formatBridgeDate(value) { if (!value) return "—"; const date = new Date(value); return Number.isNaN(date.valueOf()) ? "—" : new Intl.DateTimeFormat("tr-TR", { day: "numeric", month: "long", year: "numeric" }).format(date); }

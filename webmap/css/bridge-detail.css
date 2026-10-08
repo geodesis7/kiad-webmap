@@ -3,7 +3,100 @@
 }
 
 .bridge-kpi-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.bridge-summary-section .tunnel-kpi-card {
+    min-height: 84px;
+    padding: 14px;
+}
+
+.bridge-summary-section .tunnel-kpi-card strong {
+    color: var(--color-primary-900, #12455e);
+    font-size: 20px;
+}
+
+.bridge-reference-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px 16px;
+    margin-top: 12px;
+    color: var(--text-muted, #667085);
+    font-size: 12px;
+}
+
+.bridge-reference-meta span {
+    display: inline-flex;
+    gap: 5px;
+}
+
+.bridge-reference-meta b {
+    color: var(--text, #263238);
+    font-weight: 600;
+}
+
+.bridge-progress-list {
+    display: grid;
+    gap: 13px;
+}
+
+.bridge-progress-item + .bridge-progress-item {
+    padding-top: 13px;
+    border-top: 1px solid var(--border-color, #edf0f2);
+}
+
+.bridge-progress-heading {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 9px;
+}
+
+.bridge-progress-heading strong,
+.bridge-progress-heading span {
+    display: block;
+}
+
+.bridge-progress-heading strong {
+    color: var(--text, #263238);
+    font-size: 14px;
+}
+
+.bridge-progress-heading span,
+.bridge-progress-note {
+    color: var(--text-muted, #667085);
+    font-size: 12px;
+}
+
+.bridge-progress-heading span {
+    margin-top: 3px;
+}
+
+.bridge-progress-heading b {
+    color: var(--color-progress-primary, #1a6685);
+    font-size: 16px;
+    white-space: nowrap;
+}
+
+.bridge-progress-track {
+    height: 8px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: var(--color-progress-track, #dfe8ec);
+}
+
+.bridge-progress-track > span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--color-progress-primary, #1a6685);
+    transition: width .2s ease;
+}
+
+.bridge-progress-note {
+    display: block;
+    margin-top: 6px;
 }
 
 .bridge-detail-note,
@@ -44,7 +137,7 @@
 .bridge-support-card summary {
     display: flex;
     align-items: center;
-    min-height: 52px;
+    min-height: 46px;
     padding: 0 14px;
     cursor: pointer;
 }
