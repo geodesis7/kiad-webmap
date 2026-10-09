@@ -24,6 +24,13 @@ let cutCoverDetails = null;
 let cutCoverSummaryController = null;
 let cutCoverDetailsController = null;
 let cutCoverDetailsLoading = false;
+let cutCoverPopupItemsById = new Map();
+let cutCoverPopupItemsPromise = null;
+let cutCoverPopupItemsLoaded = false;
+
+window.addEventListener("kiad:cut-cover-dashboard-data", (event) => {
+    setCutCoverPopupItems(event.detail?.items);
+});
 
 window.addEventListener("kiad:cut-cover-detail-open", (event) => {
     openCutCoverDetail(event.detail?.assetId);
@@ -100,6 +107,37 @@ function closeCutCoverDetailDrawer() {
 
 function isCutCoverDrawerOpen() {
     return Boolean(cutCoverDrawer && !cutCoverDrawer.hidden && cutCoverDrawer.classList.contains("is-open"));
+}
+
+function setCutCoverPopupItems(items) {
+    if (!Array.isArray(items)) return;
+    cutCoverPopupItemsById = new Map(items.map((item) => [Number(item.asset_id), item]));
+    cutCoverPopupItemsLoaded = true;
+}
+
+async function getCutCoverPopupItem(assetId) {
+    const normalizedAssetId = Number(assetId);
+    if (!Number.isSafeInteger(normalizedAssetId)) return null;
+    if (cutCoverPopupItemsById.has(normalizedAssetId)) return cutCoverPopupItemsById.get(normalizedAssetId);
+    if (cutCoverPopupItemsLoaded) return null;
+
+    if (!cutCoverPopupItemsPromise) {
+        cutCoverPopupItemsPromise = apiFetch(`${window.KIAD_API_BASE_URL ?? ""}/api/cut-covers`)
+            .then((response) => {
+                if (!response.ok) throw new Error(`API isteği başarısız: ${response.status}`);
+                return response.json();
+            })
+            .then((data) => {
+                setCutCoverPopupItems(data.cut_covers);
+                return cutCoverPopupItemsById;
+            })
+            .finally(() => {
+                cutCoverPopupItemsPromise = null;
+            });
+    }
+
+    const itemsById = await cutCoverPopupItemsPromise;
+    return itemsById.get(normalizedAssetId) ?? null;
 }
 
 function renderCutCoverLoading() {
@@ -344,3 +382,4 @@ function escapeCutCoverHtml(value) { return String(value ?? "").replaceAll("&", 
 window.openCutCoverDetail = openCutCoverDetail;
 window.openCutCoverDetailDrawer = (assetId) => window.dispatchEvent(new CustomEvent("kiad:cut-cover-detail-open", { detail: { assetId: Number(assetId) } }));
 window.closeCutCoverDetailDrawer = closeCutCoverDetailDrawer;
+window.getCutCoverPopupItem = getCutCoverPopupItem;

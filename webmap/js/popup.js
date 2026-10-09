@@ -13,10 +13,7 @@ let activeAssetPopup = null;
 function openAssetPopup(mapInstance, properties, lngLat) {
     if (toFiniteNumber(properties?.type_id) === 4 && toFiniteNumber(properties?.asset_id) !== null) {
         clearPendingAssetPopup?.();
-        activeAssetPopup?.remove();
-        activeAssetPopup = null;
-        window.openCutCoverDetailDrawer?.(properties.asset_id);
-        return null;
+        window.closeCutCoverDetailDrawer?.();
     }
 
     if (typeof clearPendingAssetPopup === "function") {
@@ -43,6 +40,10 @@ function openAssetPopup(mapInstance, properties, lngLat) {
             activeAssetPopup = null;
         }
     });
+
+    if (toFiniteNumber(properties?.type_id) === 4 && toFiniteNumber(properties?.asset_id) !== null) {
+        hydrateCutCoverPopup(popup, properties, mapInstance);
+    }
 
     window.requestAnimationFrame(() => {
         window.requestAnimationFrame(() => {
@@ -202,7 +203,7 @@ function ensurePopupVisible(mapInstance, popup) {
         }
     }
 
-    ["tunnel-detail-drawer", "viaduct-detail-drawer", "culvert-detail-drawer"].forEach((drawerId) => {
+    ["tunnel-detail-drawer", "viaduct-detail-drawer", "culvert-detail-drawer", "bridge-detail-drawer", "cut-cover-detail-drawer"].forEach((drawerId) => {
         const drawer = document.getElementById(drawerId);
 
         if (
@@ -262,6 +263,10 @@ function ensurePopupVisible(mapInstance, popup) {
  * @returns {string}
  */
 function createPopupHtml(properties = {}) {
+    if (toFiniteNumber(properties.type_id) === 4) {
+        return createCutCoverPopupHtml(properties);
+    }
+
     const assetName =
         getFirstValue(
             properties.name,
@@ -377,6 +382,77 @@ function createPopupHtml(properties = {}) {
 
         </article>
     `;
+}
+
+function createCutCoverPopupHtml(properties = {}) {
+    const assetName = getFirstValue(properties.name, properties.asset_name, properties.asset_code, properties.asset_id) ?? "Aç-Kapa";
+    const assetCode = getFirstValue(properties.asset_code, properties.code);
+    const ready = properties.data_ready === true || properties.data_ready === 1 || properties.data_ready === "true";
+    const progress = ready ? formatProgress(properties.structural_progress_percent) : null;
+    const status = ready ? formatCutCoverPopupStatus(properties.status) : null;
+    const rows = [
+        createPopupRow("Varlık Kodu", assetCode),
+        createPopupRow("Kesim", getFirstValue(properties.section_code, properties.section_name)),
+        createPopupRow("Başlangıç KM", formatKilometer(properties.km_start)),
+        createPopupRow("Bitiş KM", formatKilometer(properties.km_end)),
+        createPopupRow("Uzunluk", formatLength(properties.length)),
+        createPopupRow("Betonarme İlerlemesi", progress),
+        createPopupRow("Durum", status),
+        createPopupRow("Son Aktivite", formatPopupDate(properties.latest_activity_date))
+    ].filter(Boolean).join("");
+    const operationalNote = properties.data_ready === false || properties.data_ready === 0 || properties.data_ready === "false"
+        ? '<p class="popup-empty-message">Operasyonel takip verisi yok.</p>'
+        : ready && progress === null
+            ? '<p class="popup-empty-message">Betonarme ilerleme değeri bildirilmedi.</p>'
+            : "";
+
+    return `
+        <article class="asset-popup cut-cover-popup">
+            <header class="asset-popup-header">
+                <div class="asset-popup-heading">
+                    <span class="asset-popup-eyebrow">Aç-Kapa</span>
+                    <h3 class="popup-title">${escapeHtml(String(assetName))}</h3>
+                </div>
+                ${status ? `<span class="popup-status-badge">${escapeHtml(status)}</span>` : ""}
+            </header>
+            <div class="asset-popup-body">
+                ${rows || createEmptyPopupMessage()}
+                ${operationalNote}
+            </div>
+            <footer class="asset-popup-actions">
+                <button class="tunnel-detail-button" type="button" data-popup-action="open-cut-cover-detail">
+                    Detayı Aç
+                </button>
+            </footer>
+        </article>
+    `;
+}
+
+function formatCutCoverPopupStatus(value) {
+    const labels = {
+        IN_PROGRESS: "Devam Ediyor",
+        COMPLETED: "Tamamlandı",
+        UNKNOWN: "Durum doğrulanıyor",
+        NOT_STARTED: "Başlanmadı"
+    };
+    return labels[String(value ?? "").toUpperCase()] ?? null;
+}
+
+async function hydrateCutCoverPopup(popup, properties, mapInstance) {
+    const assetId = toFiniteNumber(properties?.asset_id);
+    if (assetId === null || typeof window.getCutCoverPopupItem !== "function") return;
+
+    try {
+        const item = await window.getCutCoverPopupItem(assetId);
+        if (!item || activeAssetPopup !== popup) return;
+        popup.setHTML(createPopupHtml({ ...properties, ...item }));
+        bindPopupActions(popup, { ...properties, ...item });
+        window.requestAnimationFrame(() => {
+            window.requestAnimationFrame(() => ensurePopupVisible(mapInstance, popup));
+        });
+    } catch (error) {
+        if (typeof isAuthSessionError === "function" && isAuthSessionError(error)) return;
+    }
 }
 
 function createAssetDetailAction(properties = {}) {
@@ -505,6 +581,13 @@ function bindPopupActions(popup, properties = {}) {
         ?.querySelector('[data-popup-action="open-bridge-detail"]')
         ?.addEventListener("click", () => {
             openBridgeDetailDrawer(properties.asset_id);
+        });
+
+    popup
+        .getElement()
+        ?.querySelector('[data-popup-action="open-cut-cover-detail"]')
+        ?.addEventListener("click", () => {
+            window.openCutCoverDetailDrawer?.(properties.asset_id);
         });
 }
 

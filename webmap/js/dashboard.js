@@ -475,6 +475,9 @@ async function loadCutCoverDashboard(force = false) {
         const data = await response.json();
         if (dashboardActiveView !== "cut-covers") return;
         cutCoverDashboardData = data;
+        window.dispatchEvent(new CustomEvent("kiad:cut-cover-dashboard-data", {
+            detail: { items: data.cut_covers }
+        }));
         renderCutCoverDashboard(data);
     } catch (error) {
         if (isAuthSessionError(error) || error.name === "AbortError") return;
