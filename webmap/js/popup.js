@@ -11,6 +11,14 @@ let activeAssetPopup = null;
  * @returns {maplibregl.Popup}
  */
 function openAssetPopup(mapInstance, properties, lngLat) {
+    if (toFiniteNumber(properties?.type_id) === 4 && toFiniteNumber(properties?.asset_id) !== null) {
+        clearPendingAssetPopup?.();
+        activeAssetPopup?.remove();
+        activeAssetPopup = null;
+        window.openCutCoverDetailDrawer?.(properties.asset_id);
+        return null;
+    }
+
     if (typeof clearPendingAssetPopup === "function") {
         clearPendingAssetPopup();
     }
