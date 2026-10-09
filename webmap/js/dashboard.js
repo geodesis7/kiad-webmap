@@ -17,6 +17,11 @@ let tunnelDashboardChart = null;
 let culvertDashboardChart = null;
 let dashboardActiveView = "project";
 let dashboardAssetCount = null;
+let dashboardDragInitialized = false;
+let dashboardDragState = null;
+let dashboardDragOffset = { x: 0, y: 0 };
+
+initializeDashboardDragging();
 
 dashboardToggle?.addEventListener("click", () => {
     if (isTunnelDashboardOpen()) {
@@ -51,7 +56,8 @@ async function openTunnelDashboard(force = false) {
         dashboardActiveView = "project";
     }
 
-    if (!force && tunnelDashboardData && tunnelProgressSummaryData && viaductDashboardData && tunnelForecastDashboardData) {
+    if (!force && tunnelDashboardData && tunnelProgressSummaryData && viaductDashboardData &&
+        tunnelForecastDashboardData && bridgeDashboardData && culvertDashboardData) {
         renderActiveDashboard();
         return;
     }
@@ -78,7 +84,7 @@ async function openTunnelDashboard(force = false) {
                 return { status: "error", data: null };
             });
 
-        const [tunnelResponse, progressSummaryResponse, viaductResponse] = await Promise.all([
+        const [tunnelResponse, progressSummaryResponse, viaductResponse, bridgeResponse, culvertResponse] = await Promise.all([
             apiFetch(`${API_BASE_URL}/api/dashboard/tunnels`, {
                 signal: dashboardRequestController.signal
             }),
@@ -87,20 +93,30 @@ async function openTunnelDashboard(force = false) {
             }),
             apiFetch(`${API_BASE_URL}/api/dashboard/viaducts`, {
                 signal: dashboardRequestController.signal
+            }),
+            apiFetch(`${API_BASE_URL}/api/bridges`, {
+                signal: dashboardRequestController.signal
+            }),
+            apiFetch(`${API_BASE_URL}/api/dashboard/culverts`, {
+                signal: dashboardRequestController.signal
             })
         ]);
 
-        if (!tunnelResponse.ok || !progressSummaryResponse.ok || !viaductResponse.ok) {
+        if (!tunnelResponse.ok || !progressSummaryResponse.ok || !viaductResponse.ok ||
+            !bridgeResponse.ok || !culvertResponse.ok) {
             throw new Error(
                 `API isteği başarısız: tunnels=${tunnelResponse.status}, ` +
-                `progress=${progressSummaryResponse.status}, viaducts=${viaductResponse.status}`
+                `progress=${progressSummaryResponse.status}, viaducts=${viaductResponse.status}, ` +
+                `bridges=${bridgeResponse.status}, culverts=${culvertResponse.status}`
             );
         }
 
-        [tunnelDashboardData, tunnelProgressSummaryData, viaductDashboardData] = await Promise.all([
+        [tunnelDashboardData, tunnelProgressSummaryData, viaductDashboardData, bridgeDashboardData, culvertDashboardData] = await Promise.all([
             tunnelResponse.json(),
             progressSummaryResponse.json(),
-            viaductResponse.json()
+            viaductResponse.json(),
+            bridgeResponse.json(),
+            culvertResponse.json()
         ]);
         tunnelForecastDashboardData = await forecastRequest;
         dashboardAssetCount = getDashboardAssetCount();
@@ -144,12 +160,122 @@ function closeTunnelDashboard() {
     tunnelDashboard.classList.remove("is-open");
     tunnelDashboard.setAttribute("aria-hidden", "true");
     dashboardToggle?.setAttribute("aria-expanded", "false");
+    resetDashboardPosition();
 
     window.setTimeout(() => {
         if (!tunnelDashboard.classList.contains("is-open")) {
             tunnelDashboard.hidden = true;
         }
     }, 220);
+}
+
+function initializeDashboardDragging() {
+    if (!tunnelDashboard || dashboardDragInitialized) return;
+    dashboardDragInitialized = true;
+
+    tunnelDashboard.addEventListener("pointerdown", startDashboardDrag);
+    tunnelDashboard.addEventListener("pointermove", moveDashboardDrag);
+    tunnelDashboard.addEventListener("pointerup", finishDashboardDrag);
+    tunnelDashboard.addEventListener("pointercancel", finishDashboardDrag);
+    window.addEventListener("resize", clampDashboardAfterResize);
+}
+
+function startDashboardDrag(event) {
+    if (window.matchMedia("(max-width: 760px)").matches ||
+        event.button !== 0 || !event.isPrimary) return;
+
+    const header = event.target.closest(".dashboard-header");
+    if (!header || event.target.closest("button, a, input, select, textarea, [role='button'], [contenteditable='true']")) return;
+
+    const rect = tunnelDashboard.getBoundingClientRect();
+    dashboardDragState = {
+        pointerId: event.pointerId,
+        header,
+        startX: event.clientX,
+        startY: event.clientY,
+        startLeft: rect.left,
+        startTop: rect.top,
+        startOffsetX: dashboardDragOffset.x,
+        startOffsetY: dashboardDragOffset.y
+    };
+
+    header.classList.add("is-dragging");
+    tunnelDashboard.classList.add("is-dragging");
+    header.setPointerCapture(event.pointerId);
+    event.preventDefault();
+    event.stopPropagation();
+}
+
+function moveDashboardDrag(event) {
+    if (!dashboardDragState || event.pointerId !== dashboardDragState.pointerId) return;
+
+    const rect = tunnelDashboard.getBoundingClientRect();
+    const maxLeft = Math.max(0, window.innerWidth - rect.width);
+    const maxTop = Math.max(0, window.innerHeight - rect.height);
+    const nextLeft = clampDashboardValue(
+        dashboardDragState.startLeft + event.clientX - dashboardDragState.startX,
+        0,
+        maxLeft
+    );
+    const nextTop = clampDashboardValue(
+        dashboardDragState.startTop + event.clientY - dashboardDragState.startY,
+        0,
+        maxTop
+    );
+
+    dashboardDragOffset = {
+        x: dashboardDragState.startOffsetX + nextLeft - dashboardDragState.startLeft,
+        y: dashboardDragState.startOffsetY + nextTop - dashboardDragState.startTop
+    };
+    applyDashboardPosition();
+    event.preventDefault();
+}
+
+function finishDashboardDrag(event) {
+    if (!dashboardDragState || event.pointerId !== dashboardDragState.pointerId) return;
+
+    const { header, pointerId } = dashboardDragState;
+    dashboardDragState = null;
+    header.classList.remove("is-dragging");
+    tunnelDashboard.classList.remove("is-dragging");
+    if (header.hasPointerCapture(pointerId)) header.releasePointerCapture(pointerId);
+}
+
+function clampDashboardAfterResize() {
+    if (!isTunnelDashboardOpen()) return;
+    if (window.matchMedia("(max-width: 760px)").matches) {
+        resetDashboardPosition();
+        return;
+    }
+
+    const rect = tunnelDashboard.getBoundingClientRect();
+    const left = clampDashboardValue(rect.left, 0, Math.max(0, window.innerWidth - rect.width));
+    const top = clampDashboardValue(rect.top, 0, Math.max(0, window.innerHeight - rect.height));
+    dashboardDragOffset.x += left - rect.left;
+    dashboardDragOffset.y += top - rect.top;
+    applyDashboardPosition();
+}
+
+function applyDashboardPosition() {
+    tunnelDashboard.style.setProperty("--dashboard-drag-x", `${dashboardDragOffset.x}px`);
+    tunnelDashboard.style.setProperty("--dashboard-drag-y", `${dashboardDragOffset.y}px`);
+}
+
+function resetDashboardPosition() {
+    if (dashboardDragState) {
+        const { header, pointerId } = dashboardDragState;
+        header.classList.remove("is-dragging");
+        if (header.hasPointerCapture(pointerId)) header.releasePointerCapture(pointerId);
+    }
+    tunnelDashboard.classList.remove("is-dragging");
+    dashboardDragState = null;
+    dashboardDragOffset = { x: 0, y: 0 };
+    tunnelDashboard.style.removeProperty("--dashboard-drag-x");
+    tunnelDashboard.style.removeProperty("--dashboard-drag-y");
+}
+
+function clampDashboardValue(value, minimum, maximum) {
+    return Math.min(Math.max(value, minimum), maximum);
 }
 
 function isTunnelDashboardOpen() {
@@ -318,7 +444,9 @@ function renderActiveDashboard() {
         renderProjectDashboard(
             tunnelDashboardData,
             viaductDashboardData,
-            tunnelProgressSummaryData
+            tunnelProgressSummaryData,
+            bridgeDashboardData,
+            culvertDashboardData
         );
     }
 }
@@ -695,7 +823,13 @@ function formatDashboardCulvertValue(value) {
     return value === null || value === undefined || value === "" ? "-" : String(value);
 }
 
-function renderProjectDashboard(tunnelData = {}, viaductData = {}, progressData = {}) {
+function renderProjectDashboard(
+    tunnelData = {},
+    viaductData = {},
+    progressData = {},
+    bridgeData = {},
+    culvertData = {}
+) {
     destroyTunnelDashboardChart();
 
     const tunnelPortfolio = getCanonicalTunnelPortfolio(progressData, tunnelData.tunnels);
@@ -705,26 +839,24 @@ function renderProjectDashboard(tunnelData = {}, viaductData = {}, progressData 
     );
     const viaductSummary = viaductData.summary ?? {};
     const viaducts = Array.isArray(viaductData.viaducts) ? viaductData.viaducts : [];
-    const latestDataDate = getLatestDashboardDate(
-        tunnelSummary.latest_record_date,
-        viaductSummary.latest_activity_date,
-        viaductSummary.latest_import_finished_at
-    );
+    const operationalViaductCount = viaductSummary.data_ready_viaduct_count;
 
     dashboardContent.innerHTML = `
-        ${createTunnelDashboardHeader(latestDataDate)}
+        ${createTunnelDashboardHeader()}
         ${createDashboardNavigation("project")}
         <div class="dashboard-scroll">
-            ${createProjectDashboardKpis(tunnelSummary, viaductSummary, latestDataDate)}
+            ${createProjectDashboardKpis(tunnelData, viaductSummary, bridgeData, culvertData)}
 
             <div class="dashboard-project-summaries">
-                ${createProjectTunnelSummary(tunnelSummary)}
+                ${createProjectTunnelSummary(tunnelSummary, tunnelData.summary)}
                 ${createProjectViaductSummary(viaductSummary, viaducts)}
+                ${createProjectBridgeSummary(bridgeData)}
+                ${createProjectCulvertSummary(culvertData)}
             </div>
 
             <div class="dashboard-project-panels">
                 ${createProjectActivityPanel(tunnelSummary, viaductSummary)}
-                ${createProjectOperationsPanel(tunnelSummary, viaductSummary)}
+                ${createProjectOperationsPanel(tunnelSummary, operationalViaductCount)}
                 ${createProjectQualityPanel(viaductSummary)}
             </div>
         </div>
@@ -734,14 +866,18 @@ function renderProjectDashboard(tunnelData = {}, viaductData = {}, progressData 
     bindProjectSummaryEvents();
 }
 
-function createProjectDashboardKpis(tunnelSummary, viaductSummary, latestDataDate) {
+function createProjectDashboardKpis(tunnelData, viaductSummary, bridgeData, culvertData) {
+    const assets = typeof assetsById !== "undefined" ? [...assetsById.values()] : [];
+    const alignment = assets.find((asset) => String(asset.type_code).toUpperCase() === "GNL");
+    const alignmentLength = alignment?.length;
+    const activeCulvertCount = culvertData.summary?.in_progress_count;
     const kpis = [
-        ["Toplam Varlık", formatDashboardNumber(dashboardAssetCount), "mevcut proje varlıkları"],
-        ["Operasyonel Tünel", formatDashboardNumber(tunnelSummary.active_tunnel_count), "veri bulunan"],
-        ["Operasyonel Viyadük", formatDashboardNumber(viaductSummary.data_ready_viaduct_count), "veri hazır"],
-        ["Aktif Tünel Aynası", formatDashboardNumber(tunnelSummary.active_face_count), "aktif operasyon"],
-        ["Son Veri Güncellemesi", formatDashboardDate(latestDataDate), "tünel + viyadük"],
-        ["Veri Kalite Uyarısı", formatDashboardNumber(viaductSummary.quality_warning_count), "mevcut viyadük kayıtları"]
+        ["Toplam Varlık", formatDashboardNumber(dashboardAssetCount), "silinmemiş proje varlıkları"],
+        ["Hat Uzunluğu", formatDashboardProjectLineLength(alignmentLength), "assets.length canonical değeri"],
+        ["Aktif Tünel", formatDashboardNumber(tunnelData.summary?.active_tunnel_count), "en az bir aktif aynası olan"],
+        ["Aktif Viyadük", formatDashboardNumber(viaductSummary.data_ready_viaduct_count), "operasyonel çalışma bulunan"],
+        ["Aktif Köprü", formatDashboardNumber(bridgeData.active_count), "devam eden canonical imalatı olan"],
+        ["Aktif Menfez", formatDashboardNumber(activeCulvertCount), "devam ediyor durumundaki"]
     ];
 
     return `
@@ -757,28 +893,26 @@ function createProjectDashboardKpis(tunnelSummary, viaductSummary, latestDataDat
     `;
 }
 
-function createProjectTunnelSummary(summary = {}) {
+function createProjectTunnelSummary(summary = {}, portfolioSummary = {}) {
     return `
-        <button class="dashboard-summary-card" type="button" data-project-summary-view="tunnels">
+        <button class="dashboard-summary-card dashboard-project-domain-card" type="button" data-project-summary-view="tunnels" aria-label="Tüneller dashboard sekmesini aç">
             <div class="dashboard-card-heading">
                 <div>
-                    <span>Tünel Operasyonları</span>
-                    <h3>Tüneller</h3>
+                    <span>PORTFÖY · TÜNEL</span>
+                    <h3>Tünel İmalatları</h3>
                 </div>
                 <b aria-hidden="true">→</b>
             </div>
-            <dl class="dashboard-summary-metrics">
-                ${createDashboardMetric("Toplam Tünel", formatDashboardNumber(summary.total_tunnel_count))}
-                ${createDashboardMetric("Operasyonel Tünel", formatDashboardNumber(summary.active_tunnel_count))}
-                ${createDashboardMetric("Aktif Ayna", formatDashboardNumber(summary.active_face_count))}
-                ${createDashboardProgressMetric(
-                    "Kazı İlerlemesi",
-                    formatDashboardPrecisePercent(summary.overall_progress_percent),
-                    "toplam tünel uzunluğuna oranlı"
-                )}
-                ${createDashboardMetric("Son 7 Gün", formatDashboardLength(summary.last_7_days_progress))}
-                ${createDashboardMetric("En Son Aktivite", formatDashboardDate(summary.latest_record_date))}
+            <div class="dashboard-domain-main-metric">
+                <span>Kazı İlerlemesi</span>
+                <strong>${escapeDashboardHtml(formatDashboardPrecisePercent(summary.overall_progress_percent))}</strong>
+                <small>Toplam tünel uzunluğuna oranlı</small>
+            </div>
+            <dl class="dashboard-domain-support-metrics">
+                ${createDashboardMetric("Aktif ayna", formatDashboardNumber(portfolioSummary.active_face_count))}
+                ${createDashboardMetric("Son 7 gün", formatDashboardLength(portfolioSummary.last_7_days_progress))}
             </dl>
+            <p class="dashboard-domain-footnote">${escapeDashboardHtml(formatDashboardNumber(portfolioSummary.active_tunnel_count))} / ${escapeDashboardHtml(formatDashboardNumber(portfolioSummary.total_tunnel_count))} tünel aktif · Son veri ${escapeDashboardHtml(formatDashboardDate(summary.latest_record_date))}</p>
         </button>
     `;
 }
@@ -788,36 +922,56 @@ function createProjectViaductSummary(summary = {}, viaducts = []) {
     const precast = aggregateDashboardPrecastCoverage(viaducts);
 
     return `
-        <button class="dashboard-summary-card" type="button" data-project-summary-view="viaducts">
+        <button class="dashboard-summary-card dashboard-project-domain-card" type="button" data-project-summary-view="viaducts" aria-label="Viyadükler dashboard sekmesini aç">
             <div class="dashboard-card-heading">
                 <div>
-                    <span>Viyadük Operasyonları</span>
-                    <h3>Viyadükler</h3>
+                    <span>PORTFÖY · VİYADÜK</span>
+                    <h3>Viyadük İmalatları</h3>
                 </div>
                 <b aria-hidden="true">→</b>
             </div>
-            <dl class="dashboard-summary-metrics">
-                ${createDashboardMetric("Toplam / Operasyonel", `${formatDashboardNumber(summary.total_viaduct_count)} / ${formatDashboardNumber(summary.data_ready_viaduct_count)}`)}
-                ${createDashboardMetric("Toplam Yapı", formatDashboardNumber(summary.structure_count))}
-                ${createDashboardProgressMetric(
-                    "Kazık İlerlemesi",
-                    formatDashboardPrecisePercent(summary.pile_count_progress_percent),
-                    `${formatDashboardNumber(summary.completed_pile_count)} / ${formatDashboardNumber(summary.planned_pile_count)} kazık`
-                )}
-                ${createDashboardProgressMetric(
-                    "Betonarme İlerlemesi",
-                    formatDashboardPrecisePercent(concrete.percent),
-                    `Kayıt bazlı · ${formatDashboardNumber(concrete.completed)} / ${formatDashboardNumber(concrete.total)}`
-                )}
-                ${createDashboardProgressMetric(
-                    "Prekast İlerlemesi",
-                    formatDashboardPrecisePercent(precast.percent),
-                    `Üretim kaydı kapsamı · ${formatDashboardNumber(precast.knownCount)} / ${formatDashboardNumber(precast.recordCount)}`
-                )}
-                ${createDashboardMetric("En Son Aktivite", formatDashboardDate(summary.latest_activity_date))}
+            <div class="dashboard-domain-main-metric">
+                <span>Kazık İlerlemesi · Fiziksel</span>
+                <strong>${escapeDashboardHtml(formatDashboardPrecisePercent(summary.pile_count_progress_percent))}</strong>
+                <small>${escapeDashboardHtml(formatDashboardNumber(summary.completed_pile_count))} / ${escapeDashboardHtml(formatDashboardNumber(summary.planned_pile_count))} kazık</small>
+            </div>
+            <dl class="dashboard-domain-support-metrics">
+                ${createDashboardMetric("Betonarme · kayıt bazlı", formatDashboardPrecisePercent(concrete.percent))}
+                ${createDashboardMetric("Prekast · kayıt kapsamı", formatDashboardPrecisePercent(precast.percent))}
             </dl>
+            <p class="dashboard-domain-footnote">${escapeDashboardHtml(formatDashboardNumber(summary.total_viaduct_count))} viyadük · Betonarme ${escapeDashboardHtml(formatDashboardNumber(concrete.completed))}/${escapeDashboardHtml(formatDashboardNumber(concrete.total))} kayıt · Üretim tarihi ${escapeDashboardHtml(formatDashboardNumber(precast.knownCount))}/${escapeDashboardHtml(formatDashboardNumber(precast.recordCount))}</p>
         </button>
     `;
+}
+
+function createProjectBridgeSummary(data = {}) {
+    const bridges = Array.isArray(data.bridges) ? data.bridges : [];
+    const totalSupports = bridges.reduce((sum, bridge) => sum + (Number(bridge.support_count) || 0), 0);
+    const ongoingRecords = bridges.reduce((sum, bridge) => sum + (Number(bridge.in_progress_record_count) || 0), 0);
+    return `
+        <button class="dashboard-summary-card dashboard-project-domain-card" type="button" data-project-summary-view="bridges" aria-label="Köprüler dashboard sekmesini aç">
+            <div class="dashboard-card-heading"><div><span>PORTFÖY · KÖPRÜ</span><h3>Köprü İmalatları</h3></div><b aria-hidden="true">→</b></div>
+            <div class="dashboard-domain-main-metric"><span>Aktif köprü</span><strong>${escapeDashboardHtml(formatDashboardNumber(data.active_count))}</strong><small>Devam eden canonical imalat kaydı bulunan</small></div>
+            <dl class="dashboard-domain-support-metrics">${createDashboardMetric("Destek", formatDashboardNumber(totalSupports))}${createDashboardMetric("Devam eden imalat", formatDashboardNumber(ongoingRecords))}</dl>
+            <p class="dashboard-domain-footnote">${escapeDashboardHtml(formatDashboardNumber(data.count))} köprüde canonical ilerleme verisi · Genel yüzde üretilmiyor</p>
+        </button>`;
+}
+
+function createProjectCulvertSummary(data = {}) {
+    const summary = data.summary ?? {};
+    return `
+        <button class="dashboard-summary-card dashboard-project-domain-card" type="button" data-project-summary-view="culverts" aria-label="Menfezler dashboard sekmesini aç">
+            <div class="dashboard-card-heading"><div><span>PORTFÖY · MENFEZ</span><h3>Menfez İmalatları</h3></div><b aria-hidden="true">→</b></div>
+            <div class="dashboard-domain-main-metric"><span>Adet bazlı ilerleme</span><strong>${escapeDashboardHtml(formatDashboardPrecisePercent(summary.count_progress_percent))}</strong><small>Tamamlanan menfez adedi oranı · ${escapeDashboardHtml(formatDashboardNumber(summary.completed_count))} / ${escapeDashboardHtml(formatDashboardNumber(summary.total_culvert_count))}</small></div>
+            <dl class="dashboard-domain-support-metrics">${createDashboardMetric("Devam ediyor", formatDashboardNumber(summary.in_progress_count))}${createDashboardMetric("Tamamlandı", formatDashboardNumber(summary.completed_count))}</dl>
+            <p class="dashboard-domain-footnote">Toplam ${escapeDashboardHtml(formatDashboardNumber(summary.total_culvert_count))} menfez · Durum sayımları canonical menfez özetinden</p>
+        </button>`;
+}
+
+function formatDashboardProjectLineLength(value) {
+    const meters = Number(value);
+    if (value === null || value === undefined || value === "" || !Number.isFinite(meters)) return "-";
+    return `${(meters / 1000).toLocaleString("tr-TR", { maximumFractionDigits: 1 })} km`;
 }
 
 function createDashboardProgressMetric(label, value, note) {
@@ -876,7 +1030,7 @@ function createProjectActivityPanel(tunnelSummary, viaductSummary) {
     `;
 }
 
-function createProjectOperationsPanel(tunnelSummary, viaductSummary) {
+function createProjectOperationsPanel(tunnelSummary, operationalViaductCount) {
     return `
         <section class="dashboard-card dashboard-project-panel">
             <div class="dashboard-card-heading">
@@ -885,7 +1039,7 @@ function createProjectOperationsPanel(tunnelSummary, viaductSummary) {
             <dl class="dashboard-panel-rows">
                 ${createDashboardMetric("Aktif tünel aynası", formatDashboardNumber(tunnelSummary.active_face_count))}
                 ${createDashboardMetric("Operasyonel tünel", formatDashboardNumber(tunnelSummary.active_tunnel_count))}
-                ${createDashboardMetric("Operasyonel viyadük", formatDashboardNumber(viaductSummary.data_ready_viaduct_count))}
+                ${createDashboardMetric("Operasyonel viyadük", formatDashboardNumber(operationalViaductCount))}
             </dl>
         </section>
     `;

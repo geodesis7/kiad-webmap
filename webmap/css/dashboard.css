@@ -46,6 +46,7 @@
     transition:
         opacity 200ms ease,
         transform 200ms ease;
+    translate: var(--dashboard-drag-x, 0px) var(--dashboard-drag-y, 0px);
 }
 
 @media (min-width: 1100px) {
@@ -88,6 +89,22 @@
     padding: 19px 21px;
     color: #ffffff;
     background: linear-gradient(135deg, var(--color-primary-950), var(--color-primary-800));
+    cursor: grab;
+    touch-action: none;
+}
+
+.dashboard-header.is-dragging {
+    cursor: grabbing;
+    user-select: none;
+}
+
+.dashboard-panel.is-dragging {
+    transition: none;
+}
+
+.dashboard-header :is(button, a, input, select, textarea) {
+    cursor: pointer;
+    touch-action: auto;
 }
 
 .dashboard-header > div:first-child {
@@ -287,6 +304,7 @@
 .dashboard-project-summaries {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-auto-rows: 1fr;
     gap: 13px;
     margin-bottom: 13px;
 }
@@ -314,6 +332,77 @@
     outline: none;
     box-shadow: 0 8px 20px rgba(16, 36, 62, 0.11);
     transform: translateY(-1px);
+}
+
+.dashboard-project-domain-card {
+    display: flex;
+    min-height: 246px;
+    flex-direction: column;
+}
+
+.dashboard-project-domain-card .dashboard-card-heading > div > span {
+    color: var(--color-text-muted);
+    font-size: var(--font-meta);
+    font-weight: 750;
+    letter-spacing: 0.045em;
+}
+
+.dashboard-domain-main-metric {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 4px;
+    margin: 16px 0 12px;
+}
+
+.dashboard-domain-main-metric > span,
+.dashboard-domain-main-metric > small {
+    color: var(--color-text-muted);
+    font-size: var(--font-meta);
+    line-height: 1.35;
+}
+
+.dashboard-domain-main-metric > strong {
+    color: var(--color-primary-900);
+    font-size: clamp(25px, 3.5vw, 34px);
+    font-weight: 780;
+    line-height: 1.05;
+    overflow-wrap: anywhere;
+}
+
+.dashboard-domain-support-metrics {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin: 0;
+    padding-top: 10px;
+    border-top: 1px solid var(--color-border);
+}
+
+.dashboard-domain-support-metrics > div {
+    min-width: 0;
+}
+
+.dashboard-domain-support-metrics dt {
+    color: var(--color-text-muted);
+    font-size: var(--font-meta);
+    line-height: 1.35;
+}
+
+.dashboard-domain-support-metrics dd {
+    margin: 3px 0 0;
+    color: var(--color-text);
+    font-size: var(--font-card-title);
+    font-weight: 720;
+    overflow-wrap: anywhere;
+}
+
+.dashboard-domain-footnote {
+    margin: auto 0 0;
+    padding-top: 11px;
+    color: var(--color-text-muted);
+    font-size: var(--font-meta);
+    line-height: 1.4;
 }
 
 .dashboard-summary-card .dashboard-card-heading b {
@@ -1607,6 +1696,12 @@
 
     .dashboard-header {
         padding: 14px 15px;
+        cursor: auto;
+        touch-action: auto;
+    }
+
+    .dashboard-header.is-dragging {
+        cursor: auto;
     }
 
     .dashboard-header h2 {
@@ -1636,12 +1731,20 @@
         grid-template-columns: 1fr;
     }
 
+    .dashboard-project-domain-card {
+        min-height: 220px;
+    }
+
     .dashboard-summary-metrics {
         grid-template-columns: 1fr;
     }
 
     .dashboard-viaduct-kpis .dashboard-kpi:last-child {
         grid-column: span 2;
+    }
+
+    .dashboard-project-kpis .dashboard-kpi:last-child {
+        grid-column: auto;
     }
 
     .dashboard-project-kpis .dashboard-kpi strong,
