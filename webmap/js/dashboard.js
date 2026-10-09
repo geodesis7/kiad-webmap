@@ -10,6 +10,7 @@ let tunnelForecastDashboardData = null;
 let viaductDashboardData = null;
 let culvertDashboardData = null;
 let cutCoverDashboardData = null;
+const cutCoverDashboardAnoStatesById = new Map();
 let bridgeDashboardData = null;
 let dashboardRequestController = null;
 let culvertDashboardRequestController = null;
@@ -475,10 +476,18 @@ async function loadCutCoverDashboard(force = false) {
         const data = await response.json();
         if (dashboardActiveView !== "cut-covers") return;
         cutCoverDashboardData = data;
+        const items = Array.isArray(data.cut_covers) ? data.cut_covers : [];
+        items.filter((item) => item.data_ready === true).forEach((item) => {
+            const assetId = Number(item.asset_id);
+            const state = cutCoverDashboardAnoStatesById.get(assetId);
+            if (force && state?.status === "error") cutCoverDashboardAnoStatesById.delete(assetId);
+            if (!cutCoverDashboardAnoStatesById.has(assetId)) cutCoverDashboardAnoStatesById.set(assetId, { status: "loading" });
+        });
         window.dispatchEvent(new CustomEvent("kiad:cut-cover-dashboard-data", {
             detail: { items: data.cut_covers }
         }));
         renderCutCoverDashboard(data);
+        loadDashboardCutCoverAnoStrips(items);
     } catch (error) {
         if (isAuthSessionError(error) || error.name === "AbortError") return;
         console.error("Aç-Kapalar dashboard'u yüklenemedi:", error);
@@ -519,6 +528,7 @@ function renderCutCoverDashboard(data = {}) {
             </section>
             <section class="dashboard-card dashboard-cut-cover-portfolio" aria-labelledby="dashboard-cut-cover-title">
                 <div class="dashboard-card-heading"><div><span>Operasyon Portföyü</span><h3 id="dashboard-cut-cover-title">Aç-Kapa Tünelleri</h3></div><strong>${escapeDashboardHtml(formatDashboardCount(items.length))}</strong></div>
+                ${items.some((item) => item.data_ready === true) ? createDashboardCutCoverAnoLegend() : ""}
                 ${items.length ? `<div class="dashboard-cut-cover-list">${items.map(createDashboardCutCoverRow).join("")}</div>` : createDashboardEmpty("Aç-kapa varlığı bulunmuyor.")}
             </section>
         </div>`;
@@ -534,6 +544,7 @@ function createDashboardCutCoverRow(item = {}) {
     const noProgressActivity = ready && progress === 0 && item.status === "UNKNOWN" && item.latest_activity_date;
     const statusLabel = !ready ? "Veri Yok" : item.status === "IN_PROGRESS" ? "Devam Ediyor" : item.status === "COMPLETED" ? "Tamamlandı" : item.status === "UNKNOWN" ? "Durum doğrulanıyor" : "Veri Hazır";
     const statusClass = !ready ? "is-neutral" : item.status === "IN_PROGRESS" ? "is-progress" : item.status === "COMPLETED" ? "is-complete" : "is-neutral";
+    const anoState = ready ? cutCoverDashboardAnoStatesById.get(Number(item.asset_id)) : null;
     return `<button class="dashboard-cut-cover-row" type="button" data-dashboard-cut-cover-id="${Number(item.asset_id)}" aria-label="${escapeDashboardHtml(formatTunnelFallback(item.asset_code))} Aç-Kapa detayını aç">
         <header><div><span class="dashboard-asset-code">${escapeDashboardHtml(formatTunnelFallback(item.asset_code))}</span><strong>${escapeDashboardHtml(formatTunnelFallback(item.name))}</strong></div><span class="dashboard-cut-cover-status ${statusClass}">${escapeDashboardHtml(statusLabel)}</span></header>
         <dl class="dashboard-cut-cover-metrics">
@@ -543,7 +554,47 @@ function createDashboardCutCoverRow(item = {}) {
             <div><dt>Son Aktivite</dt><dd>${escapeDashboardHtml(formatDashboardDate(item.latest_activity_date))}</dd></div>
         </dl>
         ${hasProgress ? `<div class="dashboard-cut-cover-progress"><div><span>Betonarme İlerlemesi</span><strong>${escapeDashboardHtml(formatDashboardPrecisePercent(progress))}</strong></div><div class="dashboard-cut-cover-track" role="progressbar" aria-label="${escapeDashboardHtml(formatTunnelFallback(item.asset_code))} betonarme ilerlemesi" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${safeProgress}"><span style="width:${safeProgress}%"></span></div>${noProgressActivity ? `<small>Diğer imalatlarda faaliyet mevcut · ${escapeDashboardHtml(formatDashboardDate(item.latest_activity_date))}</small>` : ""}</div>` : `<p class="dashboard-cut-cover-empty">${ready ? "Betonarme ilerleme değeri bildirilmedi." : "Henüz operasyonel takip verisi yok."}</p>`}
+        ${ready ? `<div class="dashboard-cut-cover-ano" data-dashboard-cut-cover-ano="${Number(item.asset_id)}">${createDashboardCutCoverAno(item, anoState)}</div>` : ""}
     </button>`;
+}
+
+function createDashboardCutCoverAno(item, state) {
+    if (!state || state.status === "loading") {
+        return `<div class="dashboard-cut-cover-ano-heading"><span>Betonarme Ano Durumu</span><small>Ano bilgisi yükleniyor…</small></div><div class="dashboard-cut-cover-ano-track is-loading" aria-hidden="true"></div>`;
+    }
+    if (state.status === "error") return `<p class="dashboard-cut-cover-ano-error">Ano verisi yüklenemedi.</p>`;
+    if (state.status === "empty") return "";
+    const summary = state.summary;
+    const text = `${formatDashboardCount(summary.total)} Ano · ${formatDashboardCount(summary.completed)} tamamlandı · ${formatDashboardCount(summary.inProgress)} devam ediyor · ${formatDashboardCount(summary.noActivity)} betonarme faaliyeti yok`;
+    return `<div class="dashboard-cut-cover-ano-heading"><span>Betonarme Ano Durumu</span><small>${escapeDashboardHtml(text)}</small></div><div class="dashboard-cut-cover-ano-track" role="group" aria-label="${escapeDashboardHtml(`${formatTunnelFallback(item.asset_code)}: ${text}`)}">${state.segmentsHtml}</div>`;
+}
+
+function createDashboardCutCoverAnoLegend() {
+    return `<div class="dashboard-cut-cover-ano-legend" aria-label="Ano durum açıklamaları"><span><i class="is-completed" aria-hidden="true"></i>Tamamlandı</span><span><i class="is-in-progress" aria-hidden="true"></i>Devam Ediyor</span><span><i class="is-no-activity" aria-hidden="true"></i>Betonarme faaliyeti yok</span></div>`;
+}
+
+async function loadDashboardCutCoverAnoStrips(items) {
+    const readyItems = items.filter((item) => item.data_ready === true
+        && cutCoverDashboardAnoStatesById.get(Number(item.asset_id))?.status === "loading");
+    await Promise.all(readyItems.map(async (item) => {
+        const assetId = Number(item.asset_id);
+        try {
+            if (typeof window.getCutCoverDetailsForUi !== "function" || typeof window.getCutCoverAnoUi?.buildStrip !== "function") {
+                throw new Error("Ano gösterimi kullanılamıyor.");
+            }
+            const data = await window.getCutCoverDetailsForUi(assetId);
+            const strip = window.getCutCoverAnoUi.buildStrip(data.segments);
+            cutCoverDashboardAnoStatesById.set(assetId, strip.summary.total > 0
+                ? { status: "ready", ...strip }
+                : { status: "empty" });
+        } catch (error) {
+            if (isAuthSessionError(error)) return;
+            cutCoverDashboardAnoStatesById.set(assetId, { status: "error" });
+        }
+        const row = dashboardContent?.querySelector(`[data-dashboard-cut-cover-id="${assetId}"]`);
+        const container = row?.querySelector("[data-dashboard-cut-cover-ano]");
+        if (container) container.innerHTML = createDashboardCutCoverAno(item, cutCoverDashboardAnoStatesById.get(assetId));
+    }));
 }
 
 function bindDashboardCutCoverEvents(items) {

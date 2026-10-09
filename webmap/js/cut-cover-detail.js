@@ -15,6 +15,18 @@ const CUT_COVER_WORK_LABELS = Object.freeze({
     DRAINAGE_PROTECTION_CONCRETE: "Drenaj Koruma Betonu",
     WALKWAY: "Yürüme Yolu"
 });
+const CUT_COVER_MAIN_COMPONENTS = Object.freeze(["FOUNDATION", "LEFT_WALL", "RIGHT_WALL", "TOP_SLAB"]);
+const CUT_COVER_MAIN_COMPONENT_LABELS = Object.freeze({
+    FOUNDATION: "Temel",
+    LEFT_WALL: "Sol Perde",
+    RIGHT_WALL: "Sağ Perde",
+    TOP_SLAB: "Üst Döşeme"
+});
+const CUT_COVER_ANO_STATE_LABELS = Object.freeze({
+    completed: "Betonarme Tamamlandı",
+    inProgress: "Betonarme Devam Ediyor",
+    noActivity: "Betonarme faaliyeti yok"
+});
 
 let cutCoverDrawer = null;
 let cutCoverContent = null;
@@ -22,8 +34,9 @@ let activeCutCoverAssetId = null;
 let cutCoverSummary = null;
 let cutCoverDetails = null;
 let cutCoverSummaryController = null;
-let cutCoverDetailsController = null;
 let cutCoverDetailsLoading = false;
+const cutCoverDetailsByAssetId = new Map();
+const cutCoverDetailsPromisesByAssetId = new Map();
 let cutCoverPopupItemsById = new Map();
 let cutCoverPopupItemsPromise = null;
 let cutCoverPopupItemsLoaded = false;
@@ -85,7 +98,6 @@ async function openCutCoverDetail(assetId) {
 
 function resetCutCoverSession(assetId = null) {
     cutCoverSummaryController?.abort();
-    cutCoverDetailsController?.abort();
     activeCutCoverAssetId = assetId;
     cutCoverSummary = null;
     cutCoverDetails = null;
@@ -107,6 +119,33 @@ function closeCutCoverDetailDrawer() {
 
 function isCutCoverDrawerOpen() {
     return Boolean(cutCoverDrawer && !cutCoverDrawer.hidden && cutCoverDrawer.classList.contains("is-open"));
+}
+
+function getCutCoverDetails(assetId, { force = false } = {}) {
+    const normalizedAssetId = Number(assetId);
+    if (!Number.isSafeInteger(normalizedAssetId)) return Promise.reject(new Error("Geçersiz aç-kapa varlığı."));
+    const pending = cutCoverDetailsPromisesByAssetId.get(normalizedAssetId);
+    if (pending) return pending;
+    if (!force && cutCoverDetailsByAssetId.has(normalizedAssetId)) {
+        return Promise.resolve(cutCoverDetailsByAssetId.get(normalizedAssetId));
+    }
+
+    const request = apiFetch(`${API_BASE_URL}/api/cut-covers/${encodeURIComponent(normalizedAssetId)}/details`)
+        .then((response) => {
+            if (!response.ok) throw new Error(`API isteği başarısız: ${response.status}`);
+            return response.json();
+        })
+        .then((data) => {
+            cutCoverDetailsByAssetId.set(normalizedAssetId, data);
+            return data;
+        })
+        .finally(() => {
+            if (cutCoverDetailsPromisesByAssetId.get(normalizedAssetId) === request) {
+                cutCoverDetailsPromisesByAssetId.delete(normalizedAssetId);
+            }
+        });
+    cutCoverDetailsPromisesByAssetId.set(normalizedAssetId, request);
+    return request;
 }
 
 function setCutCoverPopupItems(items) {
@@ -245,12 +284,8 @@ async function loadCutCoverDetails(force = false) {
     cutCoverDetailsLoading = true;
     renderCutCoverPanel("segments", createCutCoverState("Ano ve bileşen ayrıntıları yükleniyor...", true));
     renderCutCoverPanel("other-works", createCutCoverState("Diğer imalatlar yükleniyor...", true));
-    cutCoverDetailsController?.abort();
-    cutCoverDetailsController = new AbortController();
     try {
-        const response = await apiFetch(`${API_BASE_URL}/api/cut-covers/${encodeURIComponent(assetId)}/details`, { signal: cutCoverDetailsController.signal });
-        if (!response.ok) throw new Error(`API isteği başarısız: ${response.status}`);
-        const data = await response.json();
+        const data = await getCutCoverDetails(assetId, { force });
         if (activeCutCoverAssetId !== assetId) return;
         cutCoverDetails = data;
         renderCutCoverDetails(data);
@@ -266,16 +301,143 @@ async function loadCutCoverDetails(force = false) {
 }
 
 function renderCutCoverDetails(data = {}) {
-    const segments = Array.isArray(data.segments) ? data.segments : [];
+    const segments = sortCutCoverSegments(data.segments);
     const otherWorks = Array.isArray(data.other_works) ? data.other_works : [];
-    renderCutCoverPanel("segments", segments.length ? `<div class="cut-cover-segment-list">${segments.map(createCutCoverSegment).join("")}</div>` : createCutCoverEmpty("Ano / bileşen kaydı bulunmuyor."));
+    renderCutCoverPanel("segments", segments.length ? `${createCutCoverAnoOverview(segments)}<div class="cut-cover-segment-list">${segments.map(createCutCoverSegment).join("")}</div>` : createCutCoverEmpty("Ano / bileşen kaydı bulunmuyor."));
+    bindCutCoverAnoNavigation();
     renderCutCoverPanel("other-works", otherWorks.length ? createCutCoverOtherWorks(otherWorks) : createCutCoverEmpty("Diğer imalat kaydı bulunmuyor."));
+}
+
+function sortCutCoverSegments(segments) {
+    return (Array.isArray(segments) ? segments : [])
+        .filter((segment) => segment && typeof segment.ano_code === "string" && segment.ano_code.trim())
+        .slice()
+        .sort((a, b) => {
+            const aNumber = Number(a.ano_code.match(/\d+/)?.[0]);
+            const bNumber = Number(b.ano_code.match(/\d+/)?.[0]);
+            if (Number.isFinite(aNumber) && Number.isFinite(bNumber) && aNumber !== bNumber) return aNumber - bNumber;
+            return a.ano_code.localeCompare(b.ano_code, "tr", { numeric: true, sensitivity: "base" });
+        });
+}
+
+function getCutCoverAnoState(segment = {}) {
+    const components = Array.isArray(segment.components) ? segment.components : [];
+    const mainComponents = components.filter((component) => CUT_COVER_MAIN_COMPONENTS.includes(component.component_type));
+    const byType = new Map();
+    mainComponents.forEach((component) => {
+        const current = byType.get(component.component_type) || [];
+        current.push(component);
+        byType.set(component.component_type, current);
+    });
+    const completed = CUT_COVER_MAIN_COMPONENTS.every((type) => {
+        const componentsForType = byType.get(type) || [];
+        return componentsForType.length > 0
+            && componentsForType.every((component) => String(component.status || "").toUpperCase() === "COMPLETED");
+    });
+    if (completed) return "completed";
+
+    const hasMainActivity = mainComponents.some((component) => {
+        const status = String(component.status || "").toUpperCase();
+        if (status === "IN_PROGRESS" || status === "COMPLETED") return true;
+        if ([component.completed_length_m, component.reinforcement_quantity, component.concrete_quantity]
+            .some((value) => value !== null && value !== undefined && Number.isFinite(Number(value)) && Number(value) > 0)) return true;
+        return [
+            component.reinforcement_start_date,
+            component.reinforcement_finish_date,
+            component.concrete_start_date,
+            component.concrete_finish_date,
+            component.last_activity_date
+        ].some((value) => value !== null && value !== undefined && value !== "");
+    });
+    return hasMainActivity ? "inProgress" : "noActivity";
+}
+
+function getCutCoverAnoSummary(segments) {
+    const summary = { total: 0, completed: 0, inProgress: 0, noActivity: 0 };
+    sortCutCoverSegments(segments).forEach((segment) => {
+        const state = getCutCoverAnoState(segment);
+        summary.total += 1;
+        if (state === "completed") summary.completed += 1;
+        else if (state === "inProgress") summary.inProgress += 1;
+        else summary.noActivity += 1;
+    });
+    return summary;
+}
+
+function buildCutCoverAnoStripForUi(segments) {
+    const sortedSegments = sortCutCoverSegments(segments);
+    return {
+        summary: getCutCoverAnoSummary(sortedSegments),
+        segmentsHtml: sortedSegments.map((segment) => createCutCoverAnoSegment(segment, false)).join("")
+    };
+}
+
+function createCutCoverAnoOverview(segments) {
+    const summary = getCutCoverAnoSummary(segments);
+    const summaryItems = [
+        ["Toplam Ano", summary.total],
+        ["Tamamlanan", summary.completed],
+        ["Devam Eden", summary.inProgress],
+        ["Betonarme Faaliyeti Yok", summary.noActivity]
+    ];
+    return `<section class="cut-cover-ano-overview" aria-label="Betonarme Ano Durumu">
+        <h3>Betonarme Ano Durumu</h3>
+        <div class="cut-cover-ano-summary">${summaryItems.map(([label, value]) => `<div><span>${escapeCutCoverHtml(label)}</span><strong>${cutCoverCount(value)}</strong></div>`).join("")}</div>
+        <div class="cut-cover-ano-strip-wrap" aria-label="Ano durum şeridi; segment seçerek ayrıntıya gidin">
+            <div class="cut-cover-ano-strip">${sortCutCoverSegments(segments).map((segment) => createCutCoverAnoSegment(segment, true)).join("")}</div>
+        </div>
+        ${createCutCoverAnoLegend()}
+    </section>`;
+}
+
+function createCutCoverAnoSegment(segment, interactive = false) {
+    const state = getCutCoverAnoState(segment);
+    const visualState = state === "inProgress" ? "in-progress" : state === "noActivity" ? "no-activity" : "completed";
+    const anoCode = String(segment.ano_code);
+    const componentSummary = CUT_COVER_MAIN_COMPONENTS.map((type) => {
+        const component = (segment.components || []).find((item) => item.component_type === type);
+        return `${CUT_COVER_MAIN_COMPONENT_LABELS[type]}: ${getCutCoverComponentStateLabel(component)}`;
+    }).join(" · ");
+    const label = `${anoCode} — ${CUT_COVER_ANO_STATE_LABELS[state]}. ${componentSummary}`;
+    const attrs = `class="cut-cover-ano-segment is-${visualState}" title="${escapeCutCoverHtml(label)}" aria-label="${escapeCutCoverHtml(label)}"`;
+    if (!interactive) return `<span ${attrs} role="img"></span>`;
+    return `<button type="button" ${attrs} data-cut-cover-ano-target="${escapeCutCoverHtml(anoCode)}"><span aria-hidden="true"></span><small>${escapeCutCoverHtml(anoCode.match(/\d+/)?.[0] || anoCode)}</small></button>`;
+}
+
+function getCutCoverComponentStateLabel(component) {
+    if (!component) return "—";
+    const status = String(component.status || "").toUpperCase();
+    if (status === "COMPLETED") return "Tamamlandı";
+    if (status === "IN_PROGRESS") return "Devam Ediyor";
+    if (status === "NOT_STARTED") return "Başlamadı";
+    if (status === "UNKNOWN") return "Durum yok";
+    return [component.completed_length_m, component.reinforcement_quantity, component.concrete_quantity,
+        component.reinforcement_start_date, component.reinforcement_finish_date, component.concrete_start_date,
+        component.concrete_finish_date, component.last_activity_date]
+        .some((value) => value !== null && value !== undefined && value !== "") ? "Kayıt var" : "—";
+}
+
+function createCutCoverAnoLegend() {
+    return `<div class="cut-cover-ano-legend" aria-label="Ano durum açıklamaları"><span><i class="is-completed" aria-hidden="true"></i>Tamamlandı</span><span><i class="is-in-progress" aria-hidden="true"></i>Devam Ediyor</span><span><i class="is-no-activity" aria-hidden="true"></i>Betonarme faaliyeti yok</span></div>`;
+}
+
+function bindCutCoverAnoNavigation() {
+    cutCoverContent?.querySelectorAll("[data-cut-cover-ano-target]").forEach((button) => {
+        button.addEventListener("click", () => {
+            const target = [...(cutCoverContent?.querySelectorAll(".cut-cover-segment") || [])]
+                .find((segment) => segment.dataset.anoCode === button.dataset.cutCoverAnoTarget);
+            if (!target) return;
+            target.open = true;
+            target.scrollIntoView({ behavior: "smooth", block: "nearest" });
+            target.querySelector("summary")?.focus({ preventScroll: true });
+        });
+    });
 }
 
 function createCutCoverSegment(segment = {}) {
     const components = Array.isArray(segment.components) ? segment.components : [];
     const length = segment.segment_length_m == null ? null : (typeof formatLength === "function" ? formatLength(segment.segment_length_m) : `${cutCoverNumber(segment.segment_length_m)} m`);
-    return `<details class="cut-cover-segment"><summary><span><strong>${escapeCutCoverHtml(cutCoverValue(segment.ano_code))}</strong>${segment.source_label ? `<small>${escapeCutCoverHtml(segment.source_label)}</small>` : ""}</span><b>${escapeCutCoverHtml(length ?? "—")}</b></summary><div class="cut-cover-segment-body">${components.length ? components.map(createCutCoverComponent).join("") : `<p class="cut-cover-muted-note">Bu Ano için bileşen kaydı bulunmuyor.</p>`}</div></details>`;
+    return `<details class="cut-cover-segment" data-ano-code="${escapeCutCoverHtml(String(segment.ano_code || ""))}"><summary><span><strong>${escapeCutCoverHtml(cutCoverValue(segment.ano_code))}</strong>${segment.source_label ? `<small>${escapeCutCoverHtml(segment.source_label)}</small>` : ""}</span><b>${escapeCutCoverHtml(length ?? "—")}</b></summary><div class="cut-cover-segment-body">${components.length ? components.map(createCutCoverComponent).join("") : `<p class="cut-cover-muted-note">Bu Ano için bileşen kaydı bulunmuyor.</p>`}</div></details>`;
 }
 
 function createCutCoverComponent(component = {}) {
@@ -383,3 +545,5 @@ window.openCutCoverDetail = openCutCoverDetail;
 window.openCutCoverDetailDrawer = (assetId) => window.dispatchEvent(new CustomEvent("kiad:cut-cover-detail-open", { detail: { assetId: Number(assetId) } }));
 window.closeCutCoverDetailDrawer = closeCutCoverDetailDrawer;
 window.getCutCoverPopupItem = getCutCoverPopupItem;
+window.getCutCoverDetailsForUi = getCutCoverDetails;
+window.getCutCoverAnoUi = Object.freeze({ sort: sortCutCoverSegments, state: getCutCoverAnoState, summary: getCutCoverAnoSummary, buildStrip: buildCutCoverAnoStripForUi });

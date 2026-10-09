@@ -1888,6 +1888,20 @@
 .dashboard-cut-cover-track span { display: block; height: 100%; border-radius: inherit; background: var(--color-progress-primary); }
 .dashboard-cut-cover-progress small,
 .dashboard-cut-cover-empty { margin: 0; color: var(--color-text-muted); font-size: 11px; }
+.dashboard-cut-cover-ano { display: grid; gap: 6px; min-width: 0; padding-top: 2px; }
+.dashboard-cut-cover-ano-heading { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 10px; }
+.dashboard-cut-cover-ano-heading > span { color: var(--color-text-muted); font-size: 11px; font-weight: 700; }
+.dashboard-cut-cover-ano-heading > small,
+.dashboard-cut-cover-ano-error { margin: 0; color: var(--color-text-muted); font-size: 10px; line-height: 1.4; }
+.dashboard-cut-cover-ano-track { display: flex; min-width: 0; gap: 2px; }
+.dashboard-cut-cover-ano-track .cut-cover-ano-segment { flex: 1 1 0; min-width: 0; width: auto; height: 8px; min-height: 8px; padding: 0; border-radius: 2px; cursor: help; }
+.dashboard-cut-cover-ano-track .cut-cover-ano-segment.is-completed { background: var(--color-completed); }
+.dashboard-cut-cover-ano-track .cut-cover-ano-segment.is-in-progress { background: var(--color-in-progress); }
+.dashboard-cut-cover-ano-track .cut-cover-ano-segment.is-no-activity { background: var(--color-not-started); }
+.dashboard-cut-cover-ano-track.is-loading { height: 8px; border-radius: 2px; background: var(--color-surface-soft); }
+.dashboard-cut-cover-ano-legend { display: flex; flex-wrap: wrap; gap: 7px 14px; margin: 0 0 10px; color: var(--color-text-muted); font-size: 10px; }
+.dashboard-cut-cover-ano-legend > span { display: inline-flex; align-items: center; gap: 5px; }
+.dashboard-cut-cover-ano-legend i { width: 8px; height: 8px; border-radius: 2px; }
 
 @media (max-width: 900px) {
     .dashboard-cut-cover-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }

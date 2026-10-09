@@ -16,11 +16,11 @@ const KIAD_APP_SCRIPTS = Object.freeze([
     "./js/viaduct-detail.js?v=4",
     "./js/structure-itinerary.js?v=9",
     "./js/culvert-detail.js?v=2",
-    "./js/cut-cover-detail.js?v=2",
+    "./js/cut-cover-detail.js?v=3",
     "./js/bridge-detail.js?v=5",
     "./js/basemap-lifecycle.js?v=12",
     "./js/tunnel-charts.js?v=2",
-    "./js/dashboard.js?v=14"
+    "./js/dashboard.js?v=15"
 ]);
 
 const AUTH_ROLE_LABELS = Object.freeze({

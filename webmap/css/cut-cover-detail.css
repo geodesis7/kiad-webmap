@@ -58,9 +58,41 @@
 .cut-cover-work-table th { color: var(--color-text-muted); font-size: 10px; font-weight: 700; }
 .cut-cover-work-table td { color: var(--color-primary-900); }
 
+.cut-cover-ano-overview { display: grid; gap: 12px; margin: 0 0 14px; padding: 14px; border: 1px solid var(--color-border); border-radius: 10px; background: var(--color-surface); }
+.cut-cover-ano-overview h3 { margin: 0; color: var(--color-primary-900); font-size: 14px; }
+.cut-cover-ano-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.cut-cover-ano-summary > div { display: grid; min-width: 0; gap: 4px; padding: 8px; border-radius: 8px; background: var(--color-surface-soft); }
+.cut-cover-ano-summary span { color: var(--color-text-muted); font-size: 10px; line-height: 1.3; }
+.cut-cover-ano-summary strong { color: var(--color-primary-900); font-size: 16px; }
+.cut-cover-ano-strip-wrap { max-width: 100%; overflow-x: auto; overscroll-behavior-inline: contain; }
+.cut-cover-ano-strip { display: flex; width: max-content; gap: 4px; padding: 2px 1px 5px; }
+.cut-cover-ano-segment { flex: 0 0 28px; display: grid; grid-template-rows: 12px 12px; gap: 3px; width: 28px; min-height: 30px; padding: 2px; border: 0; border-radius: 4px; background: transparent; color: var(--color-text-muted); cursor: pointer; }
+.cut-cover-ano-segment > span { display: block; width: 100%; height: 12px; border-radius: 3px; }
+.cut-cover-ano-segment > small { font-size: 9px; line-height: 12px; text-align: center; }
+.cut-cover-ano-segment.is-completed > span,
+.cut-cover-ano-segment.is-completed:not(button) { background: var(--color-completed); }
+.cut-cover-ano-segment.is-in-progress > span,
+.cut-cover-ano-segment.is-in-progress:not(button) { background: var(--color-in-progress); }
+.cut-cover-ano-segment.is-no-activity > span,
+.cut-cover-ano-segment.is-no-activity:not(button) { background: var(--color-not-started); }
+.cut-cover-ano-segment:focus-visible { outline: 2px solid var(--color-primary-700); outline-offset: 2px; }
+.cut-cover-ano-legend { display: flex; flex-wrap: wrap; gap: 8px 14px; color: var(--color-text-muted); font-size: 10px; }
+.cut-cover-ano-legend > span { display: inline-flex; align-items: center; gap: 5px; }
+.cut-cover-ano-legend i,
+.dashboard-cut-cover-ano-legend i { display: inline-block; width: 9px; height: 9px; border-radius: 2px; background: var(--color-unknown); }
+.cut-cover-ano-legend i.is-completed,
+.dashboard-cut-cover-ano-legend i.is-completed { background: var(--color-completed); }
+.cut-cover-ano-legend i.is-in-progress,
+.dashboard-cut-cover-ano-legend i.is-in-progress { background: var(--color-in-progress); }
+.cut-cover-ano-legend i.is-no-activity,
+.dashboard-cut-cover-ano-legend i.is-no-activity { background: var(--color-not-started); }
+
 @media (max-width: 520px) {
     .cut-cover-tabs { overflow-x: auto; }
     .cut-cover-tabs .tunnel-detail-tab { flex: 0 0 auto; }
     .cut-cover-component dl { grid-template-columns: 1fr; }
     .cut-cover-counts { gap: 5px; }
+    .cut-cover-ano-overview { padding: 11px; }
+    .cut-cover-ano-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .cut-cover-ano-summary span { font-size: 10px; }
 }
