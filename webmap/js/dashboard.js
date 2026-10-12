@@ -10,6 +10,8 @@ let tunnelForecastDashboardData = null;
 let viaductDashboardData = null;
 let culvertDashboardData = null;
 let cutCoverDashboardData = null;
+let cutCoverDashboardError = false;
+let cutCoverDashboardPromise = null;
 const cutCoverDashboardAnoStatesById = new Map();
 let bridgeDashboardData = null;
 let dashboardRequestController = null;
@@ -445,7 +447,7 @@ function renderActiveDashboard() {
         }
     } else if (dashboardActiveView === "cut-covers") {
         if (cutCoverDashboardData) {
-            renderCutCoverDashboard(cutCoverDashboardData);
+            showCutCoverDashboard(cutCoverDashboardData);
         } else {
             loadCutCoverDashboard();
         }
@@ -456,43 +458,69 @@ function renderActiveDashboard() {
             viaductDashboardData,
             tunnelProgressSummaryData,
             bridgeDashboardData,
-            culvertDashboardData
+            culvertDashboardData,
+            cutCoverDashboardData,
+            cutCoverDashboardData ? "ready" : cutCoverDashboardError ? "error" : "loading"
         );
     }
 }
 
 async function loadCutCoverDashboard(force = false) {
     if (!dashboardContent) return;
-    if (!force && cutCoverDashboardData) return renderCutCoverDashboard(cutCoverDashboardData);
-
-    cutCoverDashboardRequestController?.abort();
-    cutCoverDashboardRequestController = new AbortController();
-    renderCutCoverDashboardLoading();
-    try {
-        const response = await apiFetch(`${API_BASE_URL}/api/dashboard/cut-covers`, {
-            signal: cutCoverDashboardRequestController.signal
-        });
-        if (!response.ok) throw new Error(`API isteği başarısız: ${response.status}`);
-        const data = await response.json();
-        if (dashboardActiveView !== "cut-covers") return;
-        cutCoverDashboardData = data;
-        const items = Array.isArray(data.cut_covers) ? data.cut_covers : [];
-        items.filter((item) => item.data_ready === true).forEach((item) => {
-            const assetId = Number(item.asset_id);
-            const state = cutCoverDashboardAnoStatesById.get(assetId);
-            if (force && state?.status === "error") cutCoverDashboardAnoStatesById.delete(assetId);
-            if (!cutCoverDashboardAnoStatesById.has(assetId)) cutCoverDashboardAnoStatesById.set(assetId, { status: "loading" });
-        });
-        window.dispatchEvent(new CustomEvent("kiad:cut-cover-dashboard-data", {
-            detail: { items: data.cut_covers }
-        }));
-        renderCutCoverDashboard(data);
-        loadDashboardCutCoverAnoStrips(items);
-    } catch (error) {
-        if (isAuthSessionError(error) || error.name === "AbortError") return;
-        console.error("Aç-Kapalar dashboard'u yüklenemedi:", error);
-        if (dashboardActiveView === "cut-covers") renderCutCoverDashboardError();
+    if (!force && cutCoverDashboardData) {
+        if (dashboardActiveView === "cut-covers") showCutCoverDashboard(cutCoverDashboardData);
+        return cutCoverDashboardData;
     }
+    if (cutCoverDashboardPromise) {
+        if (dashboardActiveView === "cut-covers") renderCutCoverDashboardLoading();
+        return cutCoverDashboardPromise;
+    }
+
+    if (force) cutCoverDashboardError = false;
+    if (dashboardActiveView === "cut-covers") renderCutCoverDashboardLoading();
+    cutCoverDashboardRequestController = new AbortController();
+    cutCoverDashboardPromise = (async () => {
+        try {
+            const response = await apiFetch(`${API_BASE_URL}/api/dashboard/cut-covers`, {
+                signal: cutCoverDashboardRequestController.signal
+            });
+            if (!response.ok) throw new Error(`API isteği başarısız: ${response.status}`);
+            const data = await response.json();
+            cutCoverDashboardData = data;
+            cutCoverDashboardError = false;
+            window.dispatchEvent(new CustomEvent("kiad:cut-cover-dashboard-data", {
+                detail: { items: data.cut_covers }
+            }));
+            if (dashboardActiveView === "cut-covers") {
+                showCutCoverDashboard(data, force);
+            } else if (dashboardActiveView === "project" && isTunnelDashboardOpen()) {
+                renderActiveDashboard();
+            }
+            return data;
+        } catch (error) {
+            if (isAuthSessionError(error) || error.name === "AbortError") return null;
+            cutCoverDashboardError = true;
+            console.error("Aç-Kapalar dashboard'u yüklenemedi:", error);
+            if (dashboardActiveView === "cut-covers") renderCutCoverDashboardError();
+            else if (dashboardActiveView === "project" && isTunnelDashboardOpen()) renderActiveDashboard();
+            return null;
+        } finally {
+            cutCoverDashboardPromise = null;
+        }
+    })();
+    return cutCoverDashboardPromise;
+}
+
+function showCutCoverDashboard(data, force = false) {
+    const items = Array.isArray(data.cut_covers) ? data.cut_covers : [];
+    items.filter((item) => item.data_ready === true).forEach((item) => {
+        const assetId = Number(item.asset_id);
+        const state = cutCoverDashboardAnoStatesById.get(assetId);
+        if (force && state?.status === "error") cutCoverDashboardAnoStatesById.delete(assetId);
+        if (!cutCoverDashboardAnoStatesById.has(assetId)) cutCoverDashboardAnoStatesById.set(assetId, { status: "loading" });
+    });
+    renderCutCoverDashboard(data);
+    loadDashboardCutCoverAnoStrips(items);
 }
 
 function renderCutCoverDashboardLoading() {
@@ -987,7 +1015,9 @@ function renderProjectDashboard(
     viaductData = {},
     progressData = {},
     bridgeData = {},
-    culvertData = {}
+    culvertData = {},
+    cutCoverData = null,
+    cutCoverState = "loading"
 ) {
     destroyTunnelDashboardChart();
 
@@ -1011,6 +1041,7 @@ function renderProjectDashboard(
                 ${createProjectViaductSummary(viaductSummary, viaducts)}
                 ${createProjectBridgeSummary(bridgeData)}
                 ${createProjectCulvertSummary(culvertData)}
+                ${createProjectCutCoverSummary(cutCoverData, cutCoverState)}
             </div>
 
             <div class="dashboard-project-panels">
@@ -1023,6 +1054,7 @@ function renderProjectDashboard(
 
     bindTunnelDashboardCommonEvents();
     bindProjectSummaryEvents();
+    if (!cutCoverDashboardData && !cutCoverDashboardError) loadCutCoverDashboard();
 }
 
 function createProjectDashboardKpis(tunnelData, viaductSummary, bridgeData, culvertData) {
@@ -1124,6 +1156,34 @@ function createProjectCulvertSummary(data = {}) {
             <div class="dashboard-domain-main-metric"><span>Adet bazlı ilerleme</span><strong>${escapeDashboardHtml(formatDashboardPrecisePercent(summary.count_progress_percent))}</strong><small>Tamamlanan menfez adedi oranı · ${escapeDashboardHtml(formatDashboardNumber(summary.completed_count))} / ${escapeDashboardHtml(formatDashboardNumber(summary.total_culvert_count))}</small></div>
             <dl class="dashboard-domain-support-metrics">${createDashboardMetric("Devam ediyor", formatDashboardNumber(summary.in_progress_count))}${createDashboardMetric("Tamamlandı", formatDashboardNumber(summary.completed_count))}</dl>
             <p class="dashboard-domain-footnote">Toplam ${escapeDashboardHtml(formatDashboardNumber(summary.total_culvert_count))} menfez · Durum sayımları canonical menfez özetinden</p>
+        </button>`;
+}
+
+function createProjectCutCoverSummary(data = null, state = "loading") {
+    const summary = data?.summary ?? {};
+    const progress = summary.weighted_structural_progress_percent;
+    const total = summary.total_asset_count;
+    const active = summary.active_asset_count;
+    const dataReady = summary.data_ready_asset_count;
+    const unavailable = state === "error";
+    const value = unavailable || progress === null || progress === undefined
+        ? "—"
+        : formatDashboardPrecisePercent(progress);
+    const footer = unavailable
+        ? "Aç-Kapa verisi alınamadı · Aç-Kapalar sekmesinden yeniden deneyin"
+        : data
+            ? `Toplam ${formatDashboardNumber(total)} Aç-Kapa`
+            : "Aç-Kapa verileri yükleniyor…";
+
+    return `
+        <button class="dashboard-summary-card dashboard-project-domain-card" type="button" data-project-summary-view="cut-covers" aria-label="Aç-Kapalar dashboard sekmesini aç">
+            <div class="dashboard-card-heading"><div><span>PORTFÖY · AÇ-KAPA</span><h3>Aç-Kapa İmalatları</h3></div><b aria-hidden="true">→</b></div>
+            <div class="dashboard-domain-main-metric"><span>Betonarme İlerlemesi</span><strong>${escapeDashboardHtml(value)}</strong><small>Ağırlıklı yapısal ilerleme</small></div>
+            <dl class="dashboard-domain-support-metrics">
+                ${createDashboardMetric("Aktif", data ? formatDashboardNumber(active) : "—")}
+                ${createDashboardMetric("Verisi Hazır", data ? formatDashboardNumber(dataReady) : "—")}
+            </dl>
+            <p class="dashboard-domain-footnote">${escapeDashboardHtml(footer)}</p>
         </button>`;
 }
 
