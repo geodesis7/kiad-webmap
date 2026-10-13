@@ -484,6 +484,10 @@ const ASSET_STYLES = {
             strokeWidth: 2.5
         },
 
+        safety: {
+            color: "#2563eb"
+        },
+
         closed: {
             color: "#64748b",
             radius: 5,

@@ -88,8 +88,8 @@ function addTunnelFaceLayers() {
             "circle-color": [
                 "case",
                 selected, style.selected.color,
-                active, style.active.color,
-                style.closed.color
+                ["match", ["get", "tunnel_category"], ["SAFETY", "ESCAPE"], style.safety.color,
+                    ["case", active, style.active.color, style.closed.color]]
             ],
             "circle-opacity": [
                 "case",

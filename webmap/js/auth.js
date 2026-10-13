@@ -3,9 +3,9 @@
 const KIAD_APP_SCRIPTS = Object.freeze([
     "./js/sidebar.js",
     "./js/popup.js?v=4",
-    "./js/layer-styles.js?v=7",
+    "./js/layer-styles.js?v=8",
     "./js/layers.js?v=3",
-    "./js/tunnel-faces.js?v=16",
+    "./js/tunnel-faces.js?v=17",
     "./js/map.js?v=10",
     "./js/dsm.js?v=5",
     "./js/alignment-km.js?v=5",
