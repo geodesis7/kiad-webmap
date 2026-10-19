@@ -79,6 +79,9 @@ function rebuildOperationalLayers() {
     addTunnelFaceLayers();
     bindTunnelFaceMapEvents();
     applyTunnelFaceAssetSelection();
+    if (typeof addAssetOverviewLayers === "function") {
+        void addAssetOverviewLayers();
+    }
 }
 
 function switchKiadBasemap(basemapId) {

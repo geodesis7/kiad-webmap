@@ -2,6 +2,25 @@
 
 const ASSET_STYLES = {
 
+    assetOverview: {
+        minZoom: 7,
+        fadeStartZoom: 10.5,
+        maxZoom: 11.5,
+        iconSize: 1,
+        textSize: 10.5,
+        textColor: "#ffffff",
+        categories: {
+            TUNNEL: "kiad-overview-tunnel",
+            VIADUCT: "kiad-overview-viaduct",
+            STATION: "kiad-overview-station"
+        },
+        collisionPriority: {
+            TUNNEL: 0,
+            VIADUCT: 1,
+            STATION: 2
+        }
+    },
+
     default: {
         color: "#64748b",
 

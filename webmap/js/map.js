@@ -289,6 +289,13 @@ function bindAssetMapInteractions() {
                 return;
             }
 
+            if (
+                typeof isAssetOverviewSymbolAtPoint === "function" &&
+                isAssetOverviewSymbolAtPoint(event.point)
+            ) {
+                return;
+            }
+
             const feature = event.features?.[0];
 
             if (!feature) {

@@ -3,13 +3,14 @@
 const KIAD_APP_SCRIPTS = Object.freeze([
     "./js/sidebar.js",
     "./js/popup.js?v=4",
-    "./js/layer-styles.js?v=8",
+    "./js/layer-styles.js?v=9",
     "./js/layers.js?v=3",
     "./js/tunnel-faces.js?v=17",
-    "./js/map.js?v=10",
+    "./js/map.js?v=11",
     "./js/dsm.js?v=5",
     "./js/alignment-km.js?v=5",
     "./js/layer-panel.js?v=4",
+    "./js/asset-overview.js?v=2",
     "./js/detail-drawers.js?v=1",
     "./js/tunnel-forecast.js?v=1",
     "./js/tunnel-detail.js?v=6",
@@ -18,7 +19,7 @@ const KIAD_APP_SCRIPTS = Object.freeze([
     "./js/culvert-detail.js?v=2",
     "./js/cut-cover-detail.js?v=3",
     "./js/bridge-detail.js?v=5",
-    "./js/basemap-lifecycle.js?v=12",
+    "./js/basemap-lifecycle.js?v=13",
     "./js/tunnel-charts.js?v=2",
     "./js/dashboard.js?v=16"
 ]);
