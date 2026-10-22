@@ -44,6 +44,9 @@ function openAssetPopup(mapInstance, properties, lngLat) {
     if (toFiniteNumber(properties?.type_id) === 4 && toFiniteNumber(properties?.asset_id) !== null) {
         hydrateCutCoverPopup(popup, properties, mapInstance);
     }
+    if (isCrossPassageCandidate(properties)) {
+        hydrateCrossPassagePopup(popup, properties, mapInstance);
+    }
 
     window.requestAnimationFrame(() => {
         window.requestAnimationFrame(() => {
@@ -203,7 +206,7 @@ function ensurePopupVisible(mapInstance, popup) {
         }
     }
 
-    ["tunnel-detail-drawer", "viaduct-detail-drawer", "culvert-detail-drawer", "bridge-detail-drawer", "cut-cover-detail-drawer"].forEach((drawerId) => {
+    ["tunnel-detail-drawer", "viaduct-detail-drawer", "culvert-detail-drawer", "bridge-detail-drawer", "cut-cover-detail-drawer", "cross-passage-detail-drawer"].forEach((drawerId) => {
         const drawer = document.getElementById(drawerId);
 
         if (
@@ -263,6 +266,9 @@ function ensurePopupVisible(mapInstance, popup) {
  * @returns {string}
  */
 function createPopupHtml(properties = {}) {
+    if (isCrossPassageCandidate(properties)) {
+        return createCrossPassagePopupHtml(properties);
+    }
     if (toFiniteNumber(properties.type_id) === 4) {
         return createCutCoverPopupHtml(properties);
     }
@@ -382,6 +388,46 @@ function createPopupHtml(properties = {}) {
 
         </article>
     `;
+}
+
+function isCrossPassageCandidate(properties = {}) {
+    const code = String(properties.asset_code ?? properties.code ?? "").trim();
+    return toFiniteNumber(properties.type_id) === 3
+        && toFiniteNumber(properties.asset_id) !== null
+        && /^cp(?:0?[1-9]|1[0-7])$/i.test(code);
+}
+
+function createCrossPassagePopupHtml(properties = {}, loadError = false) {
+    const item = properties.cp_code ? properties : null;
+    const status = item ? window.crossPassageStatus?.(item.excavation_status) : null;
+    const relationship = item ? [item.main_tunnel_asset_code, item.safety_tunnel_asset_code]
+        .filter(Boolean).map((code) => String(code).toUpperCase()).join(" ↔ ") : null;
+    const rows = item ? [
+        createPopupRow("Ana Hat KM", formatKilometer(item.mainline_km)),
+        createPopupRow("Bağlantı", relationship),
+        createPopupRow("Kazı Durumu", status?.label),
+        createPopupRow("Son Faaliyet", formatPopupDate(item.latest_activity_date))
+    ].filter(Boolean).join("") : "";
+    const code = item?.cp_code ?? properties.asset_code ?? "Cross Passage";
+    return `<article class="asset-popup cross-passage-popup">
+        <header class="asset-popup-header"><div class="asset-popup-heading"><span class="asset-popup-eyebrow">Bağlantı Tüneli</span><h3 class="popup-title">${escapeHtml(String(code).toUpperCase())}</h3></div>${status ? `<span class="popup-status-badge ${status.className}">${escapeHtml(status.label)}</span>` : ""}</header>
+        <div class="asset-popup-body">${rows || `<p class="popup-empty-message">${loadError ? "Kazı bilgisi yüklenemedi." : "Kazı bilgisi yükleniyor..."}</p>`}</div>
+        <footer class="asset-popup-actions"><button class="tunnel-detail-button" type="button" data-popup-action="open-cross-passage-detail">Detayı Aç</button></footer>
+    </article>`;
+}
+
+async function hydrateCrossPassagePopup(popup, properties, mapInstance) {
+    try {
+        const item = await window.getCrossPassagePopupItem(properties.asset_id);
+        if (activeAssetPopup !== popup) return;
+        popup.setHTML(createCrossPassagePopupHtml(item ? { ...properties, ...item } : properties, !item));
+        bindPopupActions(popup, properties);
+        window.requestAnimationFrame(() => window.requestAnimationFrame(() => ensurePopupVisible(mapInstance, popup)));
+    } catch (error) {
+        if (isAuthSessionError(error) || activeAssetPopup !== popup) return;
+        popup.setHTML(createCrossPassagePopupHtml(properties, true));
+        bindPopupActions(popup, properties);
+    }
 }
 
 function createCutCoverPopupHtml(properties = {}) {
@@ -555,6 +601,10 @@ function createBridgeDetailAction(properties = {}) {
  * @param {Record<string, unknown>} properties
  */
 function bindPopupActions(popup, properties = {}) {
+    popup
+        .getElement()
+        ?.querySelector('[data-popup-action="open-cross-passage-detail"]')
+        ?.addEventListener("click", () => window.openCrossPassageDetailDrawer?.(properties.asset_id));
     popup
         .getElement()
         ?.querySelector('[data-popup-action="open-tunnel-detail"]')

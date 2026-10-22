@@ -1917,3 +1917,26 @@
     .dashboard-cut-cover-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .dashboard-cut-cover-kpis .dashboard-kpi:last-child { grid-column: span 2; }
 }
+
+.dashboard-cross-passage-kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.dashboard-cross-passage-group { margin-bottom: 12px; }
+.dashboard-cross-passage-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+.dashboard-cross-passage-row { display: grid; align-content: start; gap: 11px; min-width: 0; padding: 12px; border: 1px solid var(--color-border); border-radius: var(--radius-card); background: var(--color-surface); }
+.dashboard-cross-passage-main { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 7px 10px; }
+.dashboard-cross-passage-main > div { display: grid; min-width: 0; gap: 2px; }
+.dashboard-cross-passage-main strong { color: var(--color-primary-900); font-size: 14px; }
+.dashboard-cross-passage-main small { overflow-wrap: anywhere; color: var(--color-text-muted); font-size: 10px; }
+.dashboard-cut-cover-status.is-not-started { background: #e9edf1; color: #536170; }
+.dashboard-cut-cover-status.is-no-data { background: #f2f4f6; color: #68778a; }
+.dashboard-cross-passage-meta { display: flex; flex-wrap: wrap; gap: 6px 17px; color: var(--color-text-muted); font-size: 11px; }
+.dashboard-cross-passage-meta span { display: inline-flex; gap: 5px; }
+.dashboard-cross-passage-meta strong { color: var(--color-primary-900); }
+.dashboard-cross-passage-open { justify-self: start; padding: 7px 10px; border: 1px solid var(--color-primary-700); border-radius: var(--radius-control); color: var(--color-primary-700); background: var(--color-surface); font-size: 11px; font-weight: 750; cursor: pointer; transition: background var(--transition-fast), color var(--transition-fast); }
+.dashboard-cross-passage-open:hover,
+.dashboard-cross-passage-open:focus-visible { color: white; background: var(--color-primary-700); }
+@media (max-width: 900px) {
+    .dashboard-cross-passage-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 600px) {
+    .dashboard-cross-passage-list { grid-template-columns: minmax(0, 1fr); }
+}

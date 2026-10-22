@@ -1,0 +1,24 @@
+.cross-passage-detail-drawer { z-index: 65; }
+.cross-passage-summary { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; color: var(--color-text-muted); font-size: 12px; }
+.cross-passage-summary strong { color: var(--color-primary-900); }
+.cross-passage-status { display: inline-flex; align-items: center; min-height: 25px; padding: 4px 9px; border-radius: 999px; font-size: 11px; font-weight: 750; }
+.cross-passage-status.is-progress { background: #fff2d9; color: #8a5a12; }
+.cross-passage-status.is-complete { background: #e4f3ee; color: #256b54; }
+.cross-passage-status.is-not-started { background: #e9edf1; color: #536170; }
+.cross-passage-status.is-no-data { background: #f2f4f6; color: #68778a; }
+.cross-passage-stages { display: grid; gap: 9px; }
+.cross-passage-stage { min-width: 0; overflow: hidden; border: 1px solid var(--color-border); border-radius: var(--radius-control); background: var(--color-surface); }
+.cross-passage-stage > summary { display: flex; justify-content: space-between; gap: 12px; padding: 12px; list-style: none; cursor: pointer; }
+.cross-passage-stage > summary::-webkit-details-marker { display: none; }
+.cross-passage-stage > summary strong { color: var(--color-primary-900); font-size: 13px; }
+.cross-passage-stage > summary span { color: var(--color-text-muted); font-size: 11px; }
+.cross-passage-stage-body { display: grid; gap: 9px; max-height: 420px; overflow-y: auto; padding: 0 10px 10px; }
+.cross-passage-event { min-width: 0; padding: 10px; border: 1px solid #e1e8ef; border-radius: var(--radius-control); background: var(--color-surface-soft); }
+.cross-passage-event header { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 3px 8px; color: var(--color-primary-900); font-size: 12px; }
+.cross-passage-event header small { color: var(--color-text-muted); font-size: 10px; }
+.cross-passage-event .tunnel-info-row { padding: 6px 0; font-size: 11px; }
+.cross-passage-empty { margin: 0; padding: 7px 2px; color: var(--color-text-muted); font-size: 12px; }
+@media (max-width: 520px) {
+    .cross-passage-stage > summary { padding: 10px; }
+    .cross-passage-event .tunnel-info-row { grid-template-columns: minmax(90px, 1fr) minmax(0, 1fr); gap: 8px; }
+}

@@ -116,6 +116,12 @@
     white-space: nowrap;
 }
 
+.cross-passage-popup .popup-status-badge { white-space: normal; text-align: center; }
+.cross-passage-popup .popup-status-badge.is-progress { color: #ffe3a8; background: rgba(217, 154, 43, 0.22); }
+.cross-passage-popup .popup-status-badge.is-complete { color: #dff8ec; background: rgba(34, 160, 107, 0.18); }
+.cross-passage-popup .popup-status-badge.is-not-started,
+.cross-passage-popup .popup-status-badge.is-no-data { color: #e1e8f0; background: rgba(255, 255, 255, 0.12); }
+
 .asset-popup-body {
     min-height: 0;
     padding: 5px 16px 10px;

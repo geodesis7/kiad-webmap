@@ -12,6 +12,8 @@ let culvertDashboardData = null;
 let cutCoverDashboardData = null;
 let cutCoverDashboardError = false;
 let cutCoverDashboardPromise = null;
+let crossPassageDashboardData = null;
+let crossPassageDashboardPromise = null;
 const cutCoverDashboardAnoStatesById = new Map();
 let bridgeDashboardData = null;
 let dashboardRequestController = null;
@@ -408,7 +410,8 @@ function createDashboardNavigation(activeView) {
         ["viaducts", "Viyadükler"],
         ["culverts", "Menfezler"],
         ["bridges", "Köprüler"],
-        ["cut-covers", "Aç-Kapalar"]
+        ["cut-covers", "Aç-Kapalar"],
+        ["cross-passages", "Cross Passage / Bağlantı Tünelleri"]
     ];
 
     return `
@@ -451,6 +454,12 @@ function renderActiveDashboard() {
         } else {
             loadCutCoverDashboard();
         }
+    } else if (dashboardActiveView === "cross-passages") {
+        if (crossPassageDashboardData) {
+            renderCrossPassageDashboard(crossPassageDashboardData);
+        } else {
+            loadCrossPassageDashboard();
+        }
     } else {
         dashboardActiveView = "project";
         renderProjectDashboard(
@@ -463,6 +472,82 @@ function renderActiveDashboard() {
             cutCoverDashboardData ? "ready" : cutCoverDashboardError ? "error" : "loading"
         );
     }
+}
+
+async function loadCrossPassageDashboard(force = false) {
+    if (!dashboardContent) return;
+    if (!force && crossPassageDashboardData) {
+        if (dashboardActiveView === "cross-passages") renderCrossPassageDashboard(crossPassageDashboardData);
+        return crossPassageDashboardData;
+    }
+    if (crossPassageDashboardPromise) return crossPassageDashboardPromise;
+    renderCrossPassageDashboardState("Cross Passage verileri yükleniyor...");
+    crossPassageDashboardPromise = (async () => {
+        try {
+            const [response, items] = await Promise.all([
+                apiFetch(`${API_BASE_URL}/api/dashboard/cross-passages`),
+                window.getCrossPassageList()
+            ]);
+            if (!response.ok) throw new Error(`Cross Passage özeti alınamadı: ${response.status}`);
+            crossPassageDashboardData = { summary: await response.json(), items };
+            if (dashboardActiveView === "cross-passages") renderCrossPassageDashboard(crossPassageDashboardData);
+            return crossPassageDashboardData;
+        } catch (error) {
+            if (isAuthSessionError(error)) return null;
+            console.error("Cross Passage dashboard'u yüklenemedi:", error);
+            if (dashboardActiveView === "cross-passages") renderCrossPassageDashboardState("Cross Passage verileri alınamadı.", true);
+            return null;
+        } finally {
+            crossPassageDashboardPromise = null;
+        }
+    })();
+    return crossPassageDashboardPromise;
+}
+
+function renderCrossPassageDashboardState(message, error = false) {
+    if (dashboardActiveView !== "cross-passages") return;
+    destroyTunnelDashboardChart();
+    dashboardContent.innerHTML = `${createTunnelDashboardHeader()}${createDashboardNavigation("cross-passages")}<div class="dashboard-state${error ? " dashboard-state-error" : ""}">${error ? "" : '<span class="tunnel-detail-spinner" aria-hidden="true"></span>'}<span>${escapeDashboardHtml(message)}</span>${error ? '<button class="dashboard-retry" type="button">Yeniden Dene</button>' : ""}</div>`;
+    bindTunnelDashboardCommonEvents();
+    if (error) dashboardContent.querySelector(".dashboard-retry")?.addEventListener("click", () => loadCrossPassageDashboard(true));
+}
+
+function renderCrossPassageDashboard(data) {
+    destroyTunnelDashboardChart();
+    const summary = data.summary ?? {};
+    const items = Array.isArray(data.items) ? data.items : [];
+    const groups = new Map();
+    items.slice().sort((a, b) => Number(a.cp_no) - Number(b.cp_no)).forEach((item) => {
+        const key = [item.main_tunnel_asset_code, item.safety_tunnel_asset_code]
+            .filter(Boolean).map((code) => String(code).toUpperCase()).join(" ↔ ") || "Bağlantı bilgisi yok";
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push(item);
+    });
+    const kpis = [
+        ["Toplam CP", summary.total_asset_count],
+        ["Kazı Devam Eden", summary.in_progress_count],
+        ["Kazısı Tamamlanan", summary.completed_count],
+        ["Veri Olmayan", summary.no_data_count]
+    ];
+    dashboardContent.innerHTML = `${createTunnelDashboardHeader(summary.latest_activity_date)}${createDashboardNavigation("cross-passages")}
+        <div class="dashboard-scroll"><section class="dashboard-kpi-grid dashboard-cross-passage-kpis" aria-label="Bağlantı tüneli kazı göstergeleri">${kpis.map(([label, value]) => `<article class="dashboard-kpi"><span>${escapeDashboardHtml(label)}</span><strong>${escapeDashboardHtml(formatDashboardCount(value))}</strong><small>Kazı kayıtları</small></article>`).join("")}</section>
+        ${[...groups.entries()].map(([label, group]) => `<section class="dashboard-card dashboard-cross-passage-group"><div class="dashboard-card-heading"><div><span>Kazı Portföyü</span><h3>${escapeDashboardHtml(label)}</h3></div><strong>${escapeDashboardHtml(formatDashboardCount(group.length))}</strong></div><div class="dashboard-cross-passage-list">${group.map(renderCrossPassageDashboardRow).join("")}</div></section>`).join("") || createDashboardEmpty("Bağlantı tüneli kaydı bulunmuyor.")}</div>`;
+    bindTunnelDashboardCommonEvents();
+    dashboardContent.querySelectorAll("[data-dashboard-cross-passage-id]").forEach((button) => {
+        button.addEventListener("click", () => {
+            const id = Number(button.dataset.dashboardCrossPassageId);
+            const item = items.find((candidate) => Number(candidate.asset_id) === id);
+            if (!item) return;
+            const asset = getDashboardAsset(id);
+            if (asset && typeof focusAsset === "function") focusAsset({ ...asset, ...item });
+            window.openCrossPassageDetailDrawer?.(id);
+        });
+    });
+}
+
+function renderCrossPassageDashboardRow(item) {
+    const status = window.crossPassageStatus(item.excavation_status);
+    return `<article class="dashboard-cross-passage-row"><div class="dashboard-cross-passage-main"><div><strong>${escapeDashboardHtml(item.cp_code ?? item.asset_code ?? "CP")}</strong><small>${escapeDashboardHtml(item.name ?? "Bağlantı Tüneli")}</small></div><span class="dashboard-cut-cover-status ${status.className}">${escapeDashboardHtml(status.label)}</span></div><div class="dashboard-cross-passage-meta"><span>Ana Hat KM <strong>${escapeDashboardHtml(crossPassageKm(item.mainline_km))}</strong></span>${item.latest_activity_date ? `<span>Son Faaliyet <strong>${escapeDashboardHtml(formatDashboardDate(item.latest_activity_date))}</strong></span>` : ""}</div><button class="dashboard-cross-passage-open" type="button" data-dashboard-cross-passage-id="${Number(item.asset_id)}" aria-label="${escapeDashboardHtml(item.cp_code ?? "Cross Passage")} detayını aç">Detayı Aç</button></article>`;
 }
 
 async function loadCutCoverDashboard(force = false) {
