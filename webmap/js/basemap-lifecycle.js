@@ -79,6 +79,10 @@ function rebuildOperationalLayers() {
     addTunnelFaceLayers();
     bindTunnelFaceMapEvents();
     applyTunnelFaceAssetSelection();
+    if (typeof addTunnelLiningLayers === "function") {
+        addTunnelLiningLayers();
+        bindTunnelLiningMapEvents();
+    }
     if (typeof addAssetOverviewLayers === "function") {
         void addAssetOverviewLayers();
     }
@@ -110,6 +114,9 @@ function switchKiadBasemap(basemapId) {
             map.once("render", () => {
                 if (generation !== basemapSwitchGeneration) return;
                 refreshTunnelFaceLayers();
+                if (typeof refreshTunnelLiningLayers === "function") {
+                    refreshTunnelLiningLayers();
+                }
             });
         }
     });

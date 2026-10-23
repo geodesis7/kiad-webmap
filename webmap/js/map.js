@@ -290,6 +290,13 @@ function bindAssetMapInteractions() {
             }
 
             if (
+                typeof isTunnelLiningAtPoint === "function" &&
+                isTunnelLiningAtPoint(event.point)
+            ) {
+                return;
+            }
+
+            if (
                 typeof isAssetOverviewSymbolAtPoint === "function" &&
                 isAssetOverviewSymbolAtPoint(event.point)
             ) {

@@ -345,11 +345,30 @@ function createLayerGroupHtml(group) {
                 class="layer-group-assets"
                 hidden
             >
+                ${group.id === "tunnels" ? createTunnelLiningControlsHtml() : ""}
                 ${assetRows}
             </div>
 
         </section>
     `;
+}
+
+function createTunnelLiningControlsHtml() {
+    const stages = [
+        ["INVERT", "İnvert Kaplaması", ASSET_STYLES.tunnelLining.invert.color],
+        ["ARCH", "Kemer Kaplaması", ASSET_STYLES.tunnelLining.arch.outlineColor]
+    ];
+    return `<div class="tunnel-lining-controls" aria-label="Nihai Kaplama katmanları">
+        <strong>Nihai Kaplama</strong>
+        ${stages.map(([stage, label, color]) => `
+            <label class="tunnel-lining-control">
+                <input class="tunnel-lining-stage-toggle" type="checkbox"
+                    value="${stage}" ${isTunnelLiningStageVisible(stage) ? "checked" : ""}>
+                <span class="tunnel-lining-swatch" style="--lining-color:${color}"></span>
+                <span>${escapeHtml(label)}</span>
+            </label>`).join("")}
+        <small>Yaklaşık konumlu imalat gösterimi</small>
+    </div>`;
 }
 
 
@@ -431,6 +450,14 @@ function bindLayerTreeEvents(groups) {
 
         if (!groupElement) {
             return;
+        }
+
+        if (group.id === "tunnels") {
+            groupElement.querySelectorAll(".tunnel-lining-stage-toggle").forEach((toggle) => {
+                toggle.addEventListener("change", () => {
+                    setTunnelLiningStageVisibility(toggle.value, toggle.checked);
+                });
+            });
         }
 
 

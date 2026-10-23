@@ -769,6 +769,23 @@ function formatKilometer(value) {
     return `${sign}${kilometer}+${meterText}`;
 }
 
+// Lining source chainage is numeric metres; preserve two-decimal source KM display.
+function formatLiningKilometer(value) {
+    if (value === null || value === undefined || value === "") return null;
+    const numericValue = Number(value);
+    if (!Number.isFinite(numericValue)) return null;
+    const roundedCentimeters = Math.round(Math.abs(numericValue) * 100);
+    const kilometer = Math.floor(roundedCentimeters / 100000);
+    const meter = (roundedCentimeters % 100000) / 100;
+    const meterText = meter.toLocaleString("tr-TR", {
+        minimumIntegerDigits: 3,
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+        useGrouping: false
+    });
+    return `${numericValue < 0 ? "-" : ""}${kilometer}+${meterText}`;
+}
+
 /**
  * Uzunluğu metre veya kilometre biçiminde gösterir.
  *

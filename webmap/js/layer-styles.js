@@ -121,6 +121,24 @@ const ASSET_STYLES = {
         }
     },
 
+    tunnelLining: {
+        minZoom: 12,
+        invert: {
+            color: "#14b8a6",
+            opacity: 0.34,
+            outlineColor: "#0f766e",
+            outlineWidth: 1.4,
+            outlineOpacity: 0.88
+        },
+        // A dashed contour remains distinct when arch and invert share geometry.
+        arch: {
+            outlineColor: "#a855f7",
+            outlineWidth: 2.5,
+            outlineOpacity: 0.95,
+            dasharray: [2, 1.5]
+        }
+    },
+
 
     "cut-cover-tunnels": {
         color: "#d97706ab",

@@ -53,6 +53,17 @@ window.addEventListener("kiad:tunnel-detail-open", (event) => {
     loadTunnelDetail(event.detail?.assetId, event.detail);
 });
 
+window.addEventListener("kiad:tunnel-lining-updated", () => {
+    tunnelLiningRequestController?.abort();
+    tunnelLiningRequestController = null;
+    tunnelLiningLoadingAssetId = null;
+    tunnelLiningCache = null;
+    if (activeTunnelAssetId !== null &&
+        tunnelDetailContent?.querySelector('[data-tunnel-tab="lining"].is-active')) {
+        void loadTunnelLining(activeTunnelAssetId, true);
+    }
+});
+
 document.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && isTunnelDetailDrawerOpen()) {
         closeTunnelDetailDrawer();
@@ -634,8 +645,38 @@ function renderTunnelLiningStage(stage, label) {
                 <div><dt>${escapeTunnelDetailHtml(metricLabel)}</dt>
                 <dd>${escapeTunnelDetailHtml(value)}</dd></div>`).join("")}
         </dl>
+        ${createTunnelLiningKmIntervals(stage)}
         ${quality.length ? `<p class="tunnel-lining-quality">${escapeTunnelDetailHtml(quality.join(" · "))}</p>` : ""}
     </section>`;
+}
+
+function createTunnelLiningKmIntervals(stage) {
+    if (stage.status === "NO_DATA") {
+        return `<div class="tunnel-lining-km"><h4>İmalat KM Aralığı</h4>
+            <p>Kayıtlı imalat bulunmuyor.</p></div>`;
+    }
+
+    const groups = Array.isArray(stage.contiguous_interval_groups)
+        ? stage.contiguous_interval_groups
+        : null;
+    if (!groups) {
+        return `<div class="tunnel-lining-km"><h4>İmalat KM Aralığı</h4>
+            <p>KM aralıkları API'de henüz yayınlanmıyor.</p></div>`;
+    }
+    const rows = groups.map((group) => {
+        const start = formatLiningKilometer(group.source_km_start);
+        const end = formatLiningKilometer(group.source_km_end);
+        if (!start || !end) return "";
+        const count = group.ano_count === null || group.ano_count === undefined
+            ? null : formatTunnelCount(group.ano_count);
+        const length = formatTunnelLiningQuantity(group.constructed_length_m, "m");
+        const details = [count === null ? null : `${count} ano`, length === "—" ? null : length]
+            .filter(Boolean).join(" · ");
+        return `<li><strong>${escapeTunnelDetailHtml(start)} → ${escapeTunnelDetailHtml(end)}</strong>
+            ${details ? `<span>${escapeTunnelDetailHtml(details)}</span>` : ""}</li>`;
+    }).filter(Boolean);
+    return `<div class="tunnel-lining-km"><h4>İmalat KM Aralığı</h4>
+        ${rows.length ? `<ul>${rows.join("")}</ul>` : "<p>KM aralığı bilgisi sağlanmadı.</p>"}</div>`;
 }
 
 function formatTunnelLiningQuantity(value, unit) {
