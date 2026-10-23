@@ -662,6 +662,117 @@
     gap: 14px;
 }
 
+.tunnel-lining-view,
+.tunnel-lining-cards {
+    display: grid;
+    gap: 12px;
+    min-width: 0;
+}
+
+.tunnel-lining-note {
+    margin: 0;
+    color: var(--color-text-muted);
+    font-size: var(--font-meta);
+}
+
+.tunnel-lining-direction {
+    display: flex;
+    gap: 6px;
+    padding: 4px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-control);
+    background: var(--color-surface-soft);
+}
+
+.tunnel-lining-direction button {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 9px 12px;
+    border: 0;
+    border-radius: calc(var(--radius-control) - 2px);
+    color: var(--color-text-muted);
+    background: transparent;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.tunnel-lining-direction button.is-active {
+    color: #fff;
+    background: var(--color-primary-800);
+}
+
+.tunnel-lining-card {
+    min-width: 0;
+    padding: 14px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-card);
+    background: var(--color-surface);
+    box-shadow: var(--shadow-small);
+}
+
+.tunnel-lining-card-heading {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.tunnel-lining-card h3 {
+    margin: 0;
+    color: var(--color-primary-900);
+    font-size: var(--font-card-title);
+}
+
+.tunnel-lining-status {
+    padding: 4px 8px;
+    border-radius: 999px;
+    color: var(--color-text-muted);
+    background: var(--color-surface-soft);
+    font-size: var(--font-meta);
+    font-weight: 700;
+}
+
+.tunnel-lining-status.is-progress { color: var(--color-primary-900); background: #e7f1f8; }
+.tunnel-lining-status.is-complete { color: #176344; background: #e8f5ed; }
+.tunnel-lining-status.is-not-started { color: #785822; background: #f8f1df; }
+
+.tunnel-lining-metrics {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin: 0;
+}
+
+.tunnel-lining-metrics div {
+    min-width: 0;
+    padding-top: 8px;
+    border-top: 1px solid var(--color-border);
+}
+
+.tunnel-lining-metrics dt {
+    color: var(--color-text-muted);
+    font-size: var(--font-meta);
+}
+
+.tunnel-lining-metrics dd {
+    margin: 3px 0 0;
+    color: var(--color-text);
+    font-size: var(--font-body);
+    font-weight: 700;
+    overflow-wrap: anywhere;
+}
+
+.tunnel-lining-quality,
+.tunnel-lining-empty {
+    margin: 12px 0 0;
+    color: var(--color-text-muted);
+    font-size: var(--font-meta);
+    overflow-wrap: anywhere;
+}
+
 .tunnel-stage-face {
     overflow: hidden;
     border: 1px solid var(--color-border);
@@ -985,6 +1096,10 @@
 }
 
 @media (max-width: 420px) {
+    .tunnel-lining-metrics {
+        grid-template-columns: 1fr;
+    }
+
     .tunnel-kpi-grid {
         grid-template-columns: 1fr;
     }

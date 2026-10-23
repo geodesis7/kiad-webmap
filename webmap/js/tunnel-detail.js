@@ -10,12 +10,16 @@ let tunnelDetailRequestController = null;
 let tunnelProgressRequestController = null;
 let tunnelStagesRequestController = null;
 let tunnelForecastRequestController = null;
+let tunnelLiningRequestController = null;
 let activeTunnelAssetId = null;
 let pendingTunnelDetailView = null;
 let tunnelStagesCache = null;
 let tunnelStagesLoadingAssetId = null;
 let tunnelForecastCache = null;
 let tunnelForecastLoadingAssetId = null;
+let tunnelLiningCache = null;
+let tunnelLiningLoadingAssetId = null;
+let selectedTunnelLiningDirection = "GIRIS";
 
 const tunnelDetailCache = new Map();
 const tunnelProgressCache = new Map();
@@ -30,6 +34,19 @@ const TUNNEL_STAGE_CONFIG = Object.freeze({
 const TUNNEL_FACE_ROLE_LABELS = Object.freeze({
     ENTRANCE: "GİRİŞ",
     EXIT: "ÇIKIŞ"
+});
+const TUNNEL_LINING_STATUSES = Object.freeze({
+    NO_DATA: { label: "Veri Yok", className: "is-no-data" },
+    IN_PROGRESS: { label: "İmalat Devam Ediyor", className: "is-progress" },
+    NOT_STARTED: { label: "Henüz Başlanmadı", className: "is-not-started" },
+    COMPLETED: { label: "İmalat Tamamlandı", className: "is-complete" }
+});
+const TUNNEL_LINING_QUALITY_LABELS = Object.freeze({
+    NO_SOURCE_EVENTS: "Kaynak imalat kaydı yok",
+    SOURCE_EVENTS_PRESENT: "Kaynak imalat kayıtları mevcut",
+    REVIEW_CHAINAGE_OUTSIDE_ASSET_KM: "Ano KM'si tünel sınırı dışında; kontrol edilmeli",
+    REVIEW_ANO_LONGER_THAN_ASSET_SCOPE: "Ano uzunluğu tünel kapsamını aşıyor; kontrol edilmeli",
+    REVIEW_OVERLAPPING_ANO_RANGE: "Çakışan Ano aralıkları; kontrol edilmeli"
 });
 
 window.addEventListener("kiad:tunnel-detail-open", (event) => {
@@ -63,6 +80,7 @@ async function loadTunnelDetail(assetId, options = {}) {
 
     resetTunnelStagesSession();
     resetTunnelForecastSession();
+    resetTunnelLiningSession();
     activeTunnelAssetId = normalizedAssetId;
     showTunnelDetailDrawer();
 
@@ -145,6 +163,7 @@ function closeTunnelDetailDrawer() {
     tunnelProgressRequestController?.abort();
     resetTunnelStagesSession();
     resetTunnelForecastSession();
+    resetTunnelLiningSession();
 
     if (typeof resetTunnelCharts === "function") {
         resetTunnelCharts(null);
@@ -220,6 +239,7 @@ function renderTunnelDetail(tunnel = {}) {
     const summary = tunnel.summary ?? {};
     const faces = Array.isArray(tunnel.faces) ? tunnel.faces : [];
     const progress = getTunnelProgress(asset, summary);
+    const showTunnelLining = isMainTunnelLiningAsset(asset);
 
     const kpis = [
         ["Toplam Uzunluk", formatTunnelLength(asset.length)],
@@ -264,6 +284,10 @@ function renderTunnelDetail(tunnel = {}) {
                     aria-selected="false" aria-controls="tunnel-charts-panel" data-tunnel-tab="charts">
                     Grafikler
                 </button>
+                ${showTunnelLining ? `<button class="tunnel-detail-tab" type="button" role="tab"
+                    aria-selected="false" aria-controls="tunnel-lining-panel" data-tunnel-tab="lining">
+                    Nihai Kaplama
+                </button>` : ""}
             </div>
 
             <div id="tunnel-general-panel" class="tunnel-detail-tab-panel" role="tabpanel" data-tunnel-panel="general">
@@ -319,6 +343,10 @@ function renderTunnelDetail(tunnel = {}) {
                     Grafikler sekme açıldığında yüklenir.
                 </div>
             </div>
+            ${showTunnelLining ? `<div id="tunnel-lining-panel" class="tunnel-detail-tab-panel" role="tabpanel"
+                data-tunnel-panel="lining" hidden>
+                <div class="tunnel-history-state">Nihai kaplama verileri sekme açıldığında yüklenir.</div>
+            </div>` : ""}
         </div>
     `;
 
@@ -403,6 +431,10 @@ function activateTunnelDetailTab(target) {
         loadTunnelStages(activeTunnelAssetId);
     }
 
+    if (target === "lining") {
+        loadTunnelLining(activeTunnelAssetId);
+    }
+
     if (
         target === "charts" &&
         typeof loadTunnelCharts === "function"
@@ -454,6 +486,165 @@ function openTunnelDetail(assetId, options = {}) {
 
 window.openTunnelDetail = openTunnelDetail;
 window.closeTunnelDetailDrawer = closeTunnelDetailDrawer;
+
+function isMainTunnelLiningAsset(asset) {
+    return /^t0[1-6]$/i.test(String(asset?.asset_code ?? "").trim());
+}
+
+function resetTunnelLiningSession() {
+    tunnelLiningRequestController?.abort();
+    tunnelLiningRequestController = null;
+    tunnelLiningCache = null;
+    tunnelLiningLoadingAssetId = null;
+    selectedTunnelLiningDirection = "GIRIS";
+}
+
+function getTunnelLiningPanel() {
+    return tunnelDetailContent?.querySelector('[data-tunnel-panel="lining"]');
+}
+
+async function loadTunnelLining(assetId, force = false) {
+    const normalizedAssetId = Number(assetId);
+    if (!Number.isFinite(normalizedAssetId) ||
+        normalizedAssetId !== activeTunnelAssetId || !getTunnelLiningPanel()) {
+        return;
+    }
+
+    if (!force && tunnelLiningCache?.assetId === normalizedAssetId) {
+        renderTunnelLining(tunnelLiningCache.data);
+        return;
+    }
+    if (!force && tunnelLiningLoadingAssetId === normalizedAssetId) {
+        return;
+    }
+
+    tunnelLiningRequestController?.abort();
+    const controller = new AbortController();
+    tunnelLiningRequestController = controller;
+    tunnelLiningLoadingAssetId = normalizedAssetId;
+    getTunnelLiningPanel().innerHTML = `
+        <div class="tunnel-history-state" role="status">
+            <span class="tunnel-detail-spinner" aria-hidden="true"></span>
+            <span>Nihai kaplama verileri yükleniyor...</span>
+        </div>`;
+
+    try {
+        const response = await apiFetch(
+            `${API_BASE_URL}/api/tunnel-lining/${encodeURIComponent(normalizedAssetId)}`,
+            { signal: controller.signal }
+        );
+        if (!response.ok) {
+            throw new Error(`Nihai kaplama API isteği başarısız: ${response.status}`);
+        }
+        const data = await response.json();
+        if (controller !== tunnelLiningRequestController ||
+            activeTunnelAssetId !== normalizedAssetId) {
+            return;
+        }
+        if (Number(data?.asset_id) !== normalizedAssetId || !Array.isArray(data?.stages)) {
+            throw new Error("Nihai kaplama yanıtı beklenen biçimde değil");
+        }
+        tunnelLiningCache = { assetId: normalizedAssetId, data };
+        renderTunnelLining(data);
+    } catch (error) {
+        if (isAuthSessionError(error) || error.name === "AbortError" ||
+            controller !== tunnelLiningRequestController ||
+            activeTunnelAssetId !== normalizedAssetId) {
+            return;
+        }
+        console.error("Nihai kaplama verileri yüklenemedi:", error);
+        const panel = getTunnelLiningPanel();
+        if (panel) {
+            panel.innerHTML = `
+                <div class="tunnel-history-state tunnel-history-error" role="alert">
+                    <strong>Nihai kaplama verileri yüklenemedi.</strong>
+                    <button type="button" data-tunnel-lining-retry>Yeniden Dene</button>
+                </div>`;
+            panel.querySelector("[data-tunnel-lining-retry]")
+                ?.addEventListener("click", () => loadTunnelLining(activeTunnelAssetId, true));
+        }
+    } finally {
+        if (controller === tunnelLiningRequestController) {
+            tunnelLiningLoadingAssetId = null;
+            tunnelLiningRequestController = null;
+        }
+    }
+}
+
+function renderTunnelLining(data) {
+    const panel = getTunnelLiningPanel();
+    if (!panel) return;
+
+    const direction = selectedTunnelLiningDirection;
+    const stages = data.stages.filter((stage) => stage.portal_direction === direction);
+    panel.innerHTML = `
+        <div class="tunnel-lining-view">
+            <p class="tunnel-lining-note">Nihai kaplama imalatları; NATM kazı invertinden ayrıdır.</p>
+            <div class="tunnel-lining-direction" role="group" aria-label="Tünel yönü">
+                ${[["GIRIS", "Giriş"], ["CIKIS", "Çıkış"]].map(([code, label]) => `
+                    <button type="button" data-tunnel-lining-direction="${code}"
+                        aria-pressed="${direction === code}" class="${direction === code ? "is-active" : ""}">
+                        ${label}
+                    </button>`).join("")}
+            </div>
+            <div class="tunnel-lining-cards">
+                ${[["INVERT", "İnvert Kaplaması"], ["ARCH", "Kemer Kaplaması"]]
+                    .map(([code, label]) => renderTunnelLiningStage(
+                        stages.find((stage) => stage.lining_stage === code), label
+                    )).join("")}
+            </div>
+        </div>`;
+
+    panel.querySelectorAll("[data-tunnel-lining-direction]").forEach((button) => {
+        button.addEventListener("click", () => {
+            if (selectedTunnelLiningDirection === button.dataset.tunnelLiningDirection) return;
+            selectedTunnelLiningDirection = button.dataset.tunnelLiningDirection;
+            renderTunnelLining(data);
+        });
+    });
+}
+
+function renderTunnelLiningStage(stage, label) {
+    if (!stage) {
+        return `<section class="tunnel-lining-card">
+            <h3>${escapeTunnelDetailHtml(label)}</h3>
+            <p class="tunnel-lining-empty">Aşama verisi sağlanmadı.</p>
+        </section>`;
+    }
+    const status = TUNNEL_LINING_STATUSES[stage.status] ??
+        { label: "Durum bilgisi yok", className: "is-no-data" };
+    const quality = String(stage.data_quality ?? "").split(";")
+        .map((code) => code.trim()).filter(Boolean)
+        .map((code) => TUNNEL_LINING_QUALITY_LABELS[code] ?? "Veri kalitesi kontrol edilmeli.");
+    const metrics = [
+        ["Ano adedi", stage.ano_count === null || stage.ano_count === undefined
+            ? "—" : formatTunnelCount(stage.ano_count)],
+        ["İmal edilen uzunluk", formatTunnelLiningQuantity(stage.constructed_length_m, "m")],
+        ["Beton hacmi", formatTunnelLiningQuantity(stage.concrete_volume_m3, "m³")],
+        ["İlk imalat", stage.first_work_date ? formatTunnelDate(stage.first_work_date) : "—"],
+        ["Son imalat", stage.latest_work_date ? formatTunnelDate(stage.latest_work_date) : "—"]
+    ];
+    return `<section class="tunnel-lining-card">
+        <div class="tunnel-lining-card-heading">
+            <h3>${escapeTunnelDetailHtml(label)}</h3>
+            <span class="tunnel-lining-status ${status.className}">${escapeTunnelDetailHtml(status.label)}</span>
+        </div>
+        <dl class="tunnel-lining-metrics">
+            ${metrics.map(([metricLabel, value]) => `
+                <div><dt>${escapeTunnelDetailHtml(metricLabel)}</dt>
+                <dd>${escapeTunnelDetailHtml(value)}</dd></div>`).join("")}
+        </dl>
+        ${quality.length ? `<p class="tunnel-lining-quality">${escapeTunnelDetailHtml(quality.join(" · "))}</p>` : ""}
+    </section>`;
+}
+
+function formatTunnelLiningQuantity(value, unit) {
+    if (value === null || value === undefined || value === "") return "—";
+    const number = Number(value);
+    return Number.isFinite(number)
+        ? `${number.toLocaleString("tr-TR", { maximumFractionDigits: 2 })} ${unit}`
+        : "—";
+}
 
 function resetTunnelForecastSession() {
     tunnelForecastRequestController?.abort();
