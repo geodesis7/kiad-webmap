@@ -1,7 +1,10 @@
 "use strict";
 
 const ASSET_OVERVIEW_SOURCE_ID = "asset-overview-source";
-const ASSET_OVERVIEW_SOURCE_LAYER = "public.web_asset_overview_points";
+const ASSET_OVERVIEW_CANONICAL_SOURCE_LAYER = "public.web_asset_overview_points";
+const ASSET_OVERVIEW_SOURCE_LAYER = window.location.hostname === "kiad.tr"
+    ? "public.web_asset_overview_points_v2"
+    : ASSET_OVERVIEW_CANONICAL_SOURCE_LAYER;
 const ASSET_OVERVIEW_LAYER_ID = "asset-overview-symbols";
 const ASSET_OVERVIEW_BOUNDS = [
     43.42006166697776, 39.668352841657054,
