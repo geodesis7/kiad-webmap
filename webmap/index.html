@@ -14,7 +14,7 @@
 
     <link href="https://unpkg.com/maplibre-gl@5.6.2/dist/maplibre-gl.css" rel="stylesheet">
 
-    <link rel="stylesheet" href="./css/styles.css?v=24">
+    <link rel="stylesheet" href="./css/styles.css?v=26">
     <link rel="stylesheet" href="./css/bridge-detail.css?v=4">
 </head>
 
@@ -118,88 +118,41 @@
 
                 <div class="sidebar-header">
                     <div>
-                        <span class="sidebar-eyebrow">
-                            Harita Yönetimi
-                        </span>
-
-                        <h2>Katmanlar</h2>
+                        <span class="sidebar-eyebrow">KIAD CBS · WEBGIS</span>
+                        <h2>Harita Katmanları</h2>
+                        <p>Varlık görünürlüğü ve katman kontrolü</p>
                     </div>
 
                     <button id="sidebar-close" class="sidebar-close" type="button" aria-label="Yan paneli kapat">
-                        ×
+                        ‹
                     </button>
                 </div>
 
-                <div class="sidebar-content">
-
-                    <section class="sidebar-section">
-
-
-                        <div class="section-title">
-                            <span>Proje Katmanları</span>
-
-                            <span id="layer-group-count" class="section-count">
-                                0
-                            </span>
-                        </div>
-
-                        <div id="layer-tree" class="layer-tree">
-                            <div class="layer-tree-loading">
-                                Katmanlar yükleniyor...
-                            </div>
-                        </div>
-
-                    </section>
-
-                    </section>
-
-                    <section class="sidebar-section">
-
-                        <div class="section-title">
-                            <span>Hızlı Bilgi</span>
-                        </div>
-
-                        <div class="quick-info-grid">
-
-                            <article class="quick-info-card">
-                                <span class="quick-info-label">
-                                    Veri servisi
-                                </span>
-
-                                <strong>pg_tileserv</strong>
-                            </article>
-
-                            <article class="quick-info-card">
-                                <span class="quick-info-label">
-                                    Veri kaynağı
-                                </span>
-
-                                <strong>PostGIS</strong>
-                            </article>
-
-                        </div>
-
-                    </section>
-
-                    <section class="sidebar-section sidebar-section-bottom">
-
-                        <div class="status-box">
-
-                            <div class="status-box-header">
-                                <span class="status-icon"></span>
-
-                                <strong>Bağlantı durumu</strong>
-                            </div>
-
-                            <span>
-                                Harita ve vektör servisleri çalışıyor.
-                            </span>
-
-                        </div>
-
-                    </section>
-
+                <div class="layer-panel-search-wrap">
+                    <label class="sr-only" for="layer-search">Katmanlarda varlık ara</label>
+                    <input id="layer-search" type="search" placeholder="Kod, yapı adı veya kesim ara..." autocomplete="off">
                 </div>
+                <div class="layer-panel-navigation">
+                    <div id="layer-category-tabs" class="layer-category-tabs" role="group" aria-label="Katman kategorileri"></div>
+                    <div class="layer-panel-list-meta">
+                        <span><strong id="layer-visible-count">0</strong> / <span id="layer-total-count">0</span> kontrol açık</span>
+                        <label>Liste <select id="layer-visibility-filter" aria-label="Liste görünürlük filtresi">
+                            <option value="all">Tümü</option>
+                            <option value="visible">Görünür</option>
+                            <option value="hidden">Gizli</option>
+                        </select></label>
+                    </div>
+                </div>
+                <div class="sidebar-content">
+                    <section class="sidebar-section">
+                        <h3 class="sr-only">Proje katmanları <span id="layer-group-count">0</span></h3>
+                        <div id="layer-tree" class="layer-tree">
+                            <div class="layer-tree-loading">Katmanlar yükleniyor...</div>
+                        </div>
+                        <p id="layer-no-results" class="layer-tree-empty" hidden>Sonuç bulunamadı.</p>
+                    </section>
+                </div>
+                <div id="layer-selected" class="layer-selected" hidden></div>
 
             </aside>
 
@@ -378,7 +331,7 @@
 
     <script src="https://unpkg.com/maplibre-gl@5.6.2/dist/maplibre-gl.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
-    <script src="./js/auth.js?v=43"></script>
+    <script src="./js/auth.js?v=44"></script>
 
 </body>
 

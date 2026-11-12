@@ -1,5 +1,5 @@
 @import url("./layout.css?v=2");
-@import url("./sidebar.css?v=2");
+@import url("./sidebar.css?v=4");
 @import url("./map-tools.css");
 @import url("./popup.css");
 @import url("./tunnel-detail.css?v=6");
@@ -54,7 +54,7 @@
 
     --header-height: 72px;
     --statusbar-height: 34px;
-    --sidebar-width: 300px;
+    --sidebar-width: 350px;
 
     --shadow-small:
         0 2px 8px rgba(15, 35, 58, 0.08);
