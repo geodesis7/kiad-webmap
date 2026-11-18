@@ -56,17 +56,34 @@ async function openStructureItinerary(assetId, options = {}) {
     renderItineraryLoading();
     pushItineraryHistory(normalizedId, assetKind);
     itineraryController = new AbortController();
+    const signal = itineraryController.signal;
 
     try {
         const response = await apiFetch(
             `${API_BASE_URL}/api/${assetKind === "bridge" ? "bridges" : "viaducts"}/${encodeURIComponent(normalizedId)}/itinerary`,
-            { signal: itineraryController.signal }
+            { signal }
         );
         if (!response.ok) throw new Error(`API isteği başarısız: ${response.status}`);
 
         const data = await response.json();
-        if (itineraryAssetId !== normalizedId) return;
+        if (itineraryAssetId !== normalizedId || signal.aborted) return;
         itineraryData = normalizeItineraryData(data);
+        if (assetKind === "viaduct" && String(itineraryData.structure.asset_code ?? "").toLowerCase() === "v02") {
+            try {
+                const v2Response = await apiFetch(
+                    `${API_BASE_URL}/api/viaducts/${encodeURIComponent(normalizedId)}/girders/v2/itinerary`,
+                    { signal }
+                );
+                if (!v2Response.ok) throw new Error(`Girder V2 itinerary: ${v2Response.status}`);
+                const v2Rows = await v2Response.json();
+                if (itineraryAssetId !== normalizedId || signal.aborted) return;
+                itineraryData = mergeViaductGirderV2Itinerary(itineraryData, v2Rows);
+            } catch (v2Error) {
+                if (isAuthSessionError(v2Error) || v2Error.name === "AbortError" || itineraryAssetId !== normalizedId) return;
+                itineraryData.girderV2Error = true;
+                console.error("V02 kiriş V2 itinereri yüklenemedi:", v2Error);
+            }
+        }
         renderStructureItinerary(itineraryData);
     } catch (error) {
         if (isAuthSessionError(error) || error.name === "AbortError" || itineraryAssetId !== normalizedId) return;
@@ -122,6 +139,34 @@ function normalizeItineraryData(source = {}) {
     };
 }
 
+function mergeViaductGirderV2Itinerary(data, rows) {
+    if (!Array.isArray(rows)) throw new Error("Girder V2 itinerary yanıtı geçersiz");
+    const byExactSpanCode = new Map(rows
+        .filter(row => row.component_type === "GIRDER_GROUP" && row.span_code != null)
+        .map(row => [row.span_code, row]));
+    const spans = data.spans.map(span => ({
+        ...span,
+        components: (span.components ?? []).map(component => {
+            if (component.type !== "GIRDER_GROUP") return component;
+            const v2 = byExactSpanCode.get(span.code);
+            if (!v2 || String(component.id) !== String(v2.stable_id)) return component;
+            return {
+                ...component,
+                status: v2.canonical_status,
+                status_reason: v2.status_evidence,
+                planned_quantity: v2.planned_count,
+                completed_quantity: v2.installed_count,
+                last_activity: v2.last_installation_date,
+                girder_v2: true,
+                source_span_code: v2.source_span_code,
+                recorded_positions: v2.recorded_positions,
+                verified_positions: v2.verified_positions
+            };
+        })
+    }));
+    return { ...data, spans };
+}
+
 function orderItineraryItems(items = []) {
     return items.map((item, index) => ({ item, index })).sort((left, right) => {
         const leftOrder = Number(left.item?.order);
@@ -160,6 +205,7 @@ function renderStructureItinerary(data) {
     }
     itineraryContent.innerHTML = `
         ${createItineraryHeader(structure)}
+        ${data.girderV2Error ? '<p class="itinerary-girder-v2-warning">Kiriş V2 durumu yüklenemedi; diğer yapı verileri gösteriliyor.</p>' : ""}
         <div class="itinerary-toolbar" aria-label="İtinerer araçları">
             <button type="button" data-itinerary-action="fit">Yapıya Sığdır</button>
             <button type="button" data-itinerary-action="zoom-out" aria-label="Uzaklaştır">−</button>
@@ -219,14 +265,14 @@ function createSpanSvg(span, index, supports, byId, spacing, axisY) {
     const accessibleLabel = `${span.code ?? "Span"}: ${componentLabel} ${componentStatusLabel(component)}`;
     return `<g class="itinerary-span" tabindex="0" role="button" data-itinerary-span-id="${escapeItinerary(span.id)}" aria-label="${escapeItinerary(accessibleLabel)}">
         ${deck ? createSpanDeckSvg(deck, start, end, axisY) : ""}
-        <rect x="${start + 10}" y="${axisY - 34}" width="${Math.max(20, end - start - 20)}" height="14" rx="2" class="itinerary-girder-beam ${statusClass(component?.status)}" />
+        <rect x="${start + 10}" y="${axisY - 34}" width="${Math.max(20, end - start - 20)}" height="14" rx="2" class="itinerary-girder-beam ${statusClass(component?.status)} ${component?.girder_v2 && component.status === "UNKNOWN" ? "is-girder-v2-unknown" : ""}" />
         ${createSpanGirderLabel(component, componentLabel, start, end, axisY)}
         <text x="${(start + end) / 2}" y="${axisY - 10}" class="itinerary-span-label">${escapeItinerary(formatSpanLabel(span))}</text>
     </g>`;
 }
 
 function createSpanGirderLabel(component, label, start, end, axisY) {
-    if (itineraryData?.structure?.type !== "BRIDGE" || !component) return "";
+    if (!component || (itineraryData?.structure?.type !== "BRIDGE" && !component.girder_v2)) return "";
     return `<text x="${(start + end) / 2}" y="${axisY - 23}" class="itinerary-component-label">${escapeItinerary(label)} ${escapeItinerary(statusMark(component.status))}</text>`;
 }
 
@@ -465,7 +511,7 @@ function createComponentDetail(component, data) {
     const completedQuantity = component.completed_quantity ?? progress.completed_count;
     const typeKicker = data.structure?.type === "BRIDGE" ? "" : (component.type ?? "OTHER");
     return `<h3>${escapeItinerary(componentPresentation(component).label)}</h3><p class="itinerary-detail-kicker">${escapeItinerary(typeKicker)}</p><dl class="itinerary-detail-list">
-        ${detailRow("Durum", componentStatusLabel(component))}${detailRow("Tasarım kapsamı", formatDesignPresence(component.design_presence ?? component.design_state))}${detailRow("Durum nedeni", formatStatusReason(component.status_reason))}${detailRow("Başlangıç", component.actual_start)}${detailRow("Bitiş", component.actual_finish)}${detailRow("Son aktivite", component.last_activity)}${detailRow("Planlanan miktar", plannedQuantity == null ? null : `${plannedQuantity}${component.unit ? ` ${component.unit}` : ""}`)}${detailRow("Tamamlanan miktar", completedQuantity == null ? null : `${completedQuantity}${component.unit ? ` ${component.unit}` : ""}`)}${detailRow("İlerleme", component.progress_percent == null ? null : `${component.progress_percent}%`)}${detailRow("Kalite", qualityText(component.quality))}${detailRow("Veri tarihi", data.dataAsOf)}</dl>`;
+        ${detailRow("Durum", componentStatusLabel(component))}${detailRow("Tasarım kapsamı", formatDesignPresence(component.design_presence ?? component.design_state))}${detailRow("Durum nedeni", formatStatusReason(component.status_reason))}${detailRow("Kaynak açıklık kodu", component.source_span_code)}${detailRow("Doğrulanan konum", component.verified_positions)}${detailRow("Başlangıç", component.actual_start)}${detailRow("Bitiş", component.actual_finish)}${detailRow("Son aktivite", component.last_activity)}${detailRow("Planlanan miktar", plannedQuantity == null ? null : `${plannedQuantity}${component.unit ? ` ${component.unit}` : ""}`)}${detailRow("Tamamlanan miktar", completedQuantity == null ? null : `${completedQuantity}${component.unit ? ` ${component.unit}` : ""}`)}${detailRow("İlerleme", component.progress_percent == null ? null : `${component.progress_percent}%`)}${detailRow("Kalite", qualityText(component.quality))}${detailRow("Veri tarihi", data.dataAsOf)}</dl>`;
 }
 
 function detailRow(label, value) { return value == null || value === "" ? "" : `<div><dt>${escapeItinerary(label)}</dt><dd>${escapeItinerary(String(value))}</dd></div>`; }
@@ -512,6 +558,7 @@ function formatDesignState(value) {
 }
 function formatStatusReason(value) {
     if (String(value ?? "").toUpperCase() === "DESIGN_PRESENT_NO_PROGRESS") return "İlerleme verisi yok";
+    if (String(value ?? "").toUpperCase() === "NO_EXACT_SPAN_MAPPING") return "Kaynak açıklık kodu birebir eşleşmedi";
     return null;
 }
 function formatSpanLength(span = {}) {

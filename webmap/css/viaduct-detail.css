@@ -2,6 +2,33 @@
     z-index: 15;
 }
 
+.viaduct-girder-v2-summary {
+    display: grid;
+    gap: 12px;
+    padding: 14px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-card);
+    background: var(--color-surface);
+}
+.viaduct-girder-v2-tabs { display: flex; gap: 8px; margin: 14px 0; }
+.viaduct-girder-v2-tabs button {
+    flex: 1; padding: 9px 12px; border: 1px solid var(--color-border);
+    border-radius: 8px; background: var(--color-surface); color: var(--color-primary-900);
+    font: inherit; font-weight: 700; cursor: pointer;
+}
+.viaduct-girder-v2-tabs button[aria-selected="true"] {
+    background: var(--color-primary-900); color: #fff;
+}
+.viaduct-girder-v2-note { color: var(--color-text-muted); font-size: var(--font-meta); }
+.viaduct-girder-v2-scroll { max-width: 100%; overflow-x: auto; }
+.viaduct-girder-v2-table { width: 100%; border-collapse: collapse; font-size: var(--font-meta); white-space: nowrap; }
+.viaduct-girder-v2-table th, .viaduct-girder-v2-table td {
+    padding: 8px; border-bottom: 1px solid var(--color-border); text-align: left;
+}
+.viaduct-girder-v2-table thead { color: var(--color-text-muted); background: var(--color-surface-soft); }
+.viaduct-girder-v2-span > summary { align-items: center; }
+.viaduct-girder-v2-span > summary span { margin-left: auto; color: var(--color-text-muted); font-size: var(--font-meta); }
+
 .viaduct-itinerary-open {
     margin-left: auto;
     padding: 7px 10px;

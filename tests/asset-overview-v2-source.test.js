@@ -32,5 +32,5 @@ test("tile URL and MapLibre source-layer use the same selected source", () => {
 
 test("cache versions load the source switch", () => {
     assert.match(auth, /asset-overview\.js\?v=3/);
-    assert.match(html, /auth\.js\?v=44/);
+    assert.match(html, /auth\.js\?v=45/);
 });

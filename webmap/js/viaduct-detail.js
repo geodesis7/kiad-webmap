@@ -12,6 +12,11 @@ let viaductStructuresController = null;
 let viaductSpansController = null;
 let viaductStructuresLoading = false;
 let viaductSpansLoading = false;
+let viaductGirderV2Summary = null;
+let viaductGirderV2Data = { production: null, installations: null, spans: null };
+let viaductGirderV2Controller = null;
+let viaductGirderV2Loading = false;
+let viaductGirderV2View = "production";
 
 window.addEventListener("kiad:viaduct-detail-open", (event) => {
     loadViaductDetail(event.detail?.assetId);
@@ -80,12 +85,17 @@ function resetViaductSession(assetId = null) {
     viaductSummaryController?.abort();
     viaductStructuresController?.abort();
     viaductSpansController?.abort();
+    viaductGirderV2Controller?.abort();
     activeViaductAssetId = assetId;
     activeViaductSummary = null;
     viaductStructuresData = null;
     viaductSpansData = null;
     viaductStructuresLoading = false;
     viaductSpansLoading = false;
+    viaductGirderV2Summary = null;
+    viaductGirderV2Data = { production: null, installations: null, spans: null };
+    viaductGirderV2Loading = false;
+    viaductGirderV2View = "production";
 }
 
 function showViaductDetailDrawer() {
@@ -425,7 +435,11 @@ function activateViaductTab(target) {
     if (target === "concrete" || target === "piles") {
         loadViaductStructures();
     } else if (target === "precast") {
-        loadViaductSpans();
+        if (String(activeViaductSummary?.asset?.asset_code ?? "").toLowerCase() === "v02") {
+            loadViaductGirderV2();
+        } else {
+            loadViaductSpans();
+        }
     }
 }
 
@@ -620,6 +634,126 @@ function createViaductPileCard(structure = {}) {
     `;
 }
 
+async function loadViaductGirderV2(force = false) {
+    const assetId = activeViaductAssetId;
+    const view = viaductGirderV2View;
+    if (!Number.isFinite(assetId) || viaductGirderV2Loading) return;
+    const viewReady = view === "installation"
+        ? viaductGirderV2Data.installations && viaductGirderV2Data.spans
+        : viaductGirderV2Data.production;
+    if (!force && viaductGirderV2Summary && viewReady) {
+        renderViaductGirderV2();
+        return;
+    }
+
+    renderViaductPanel("precast", createViaductLoadingState("Kiriş imalat ve montaj verileri yükleniyor..."));
+    viaductGirderV2Controller?.abort();
+    viaductGirderV2Controller = new AbortController();
+    viaductGirderV2Loading = true;
+    const signal = viaductGirderV2Controller.signal;
+    const base = `${API_BASE_URL}/api/viaducts/${encodeURIComponent(assetId)}/girders/v2`;
+    try {
+        const paths = viaductGirderV2Summary && !force
+            ? (view === "installation" ? ["installations", "spans"] : ["production"])
+            : ["summary", ...(view === "installation" ? ["installations", "spans"] : ["production"])];
+        const values = await Promise.all(paths.map(async (path) => {
+            const response = await apiFetch(`${base}/${path}`, { signal });
+            if (!response.ok) throw new Error(`Girder V2 ${path}: ${response.status}`);
+            return response.json();
+        }));
+        if (activeViaductAssetId !== assetId || signal.aborted) return;
+        paths.forEach((path, index) => {
+            if (path === "summary") viaductGirderV2Summary = values[index];
+            else viaductGirderV2Data[path === "installations" ? "installations" : path] = values[index];
+        });
+        renderViaductGirderV2();
+    } catch (error) {
+        if (isAuthSessionError(error) || error.name === "AbortError" || activeViaductAssetId !== assetId) return;
+        console.error("Girder V2 verileri yüklenemedi:", error);
+        renderViaductPanel("precast", createViaductErrorState("Kiriş imalat ve montaj verileri yüklenemedi.", "girder-v2"));
+        bindViaductRetryButtons();
+    } finally {
+        if (activeViaductAssetId === assetId) viaductGirderV2Loading = false;
+    }
+}
+
+function renderViaductGirderV2() {
+    const summary = viaductGirderV2Summary;
+    if (!summary) return;
+    const producedPercent = summary.production_count > 0
+        ? 100 * summary.produced_count / summary.production_count : null;
+    const installedPercent = summary.position_count > 0
+        ? 100 * summary.installed_count / summary.position_count : null;
+    renderViaductPanel("precast", `
+        <section class="viaduct-girder-v2-summary" aria-label="Prekast kiriş ilerlemesi">
+            ${createViaductProgress("Üretim", `${formatViaductCount(summary.produced_count)} / ${formatViaductCount(summary.production_count)} kiriş`, producedPercent)}
+            ${createViaductProgress("Montaj", `${formatViaductCount(summary.installed_count)} / ${formatViaductCount(summary.position_count)} konum`, installedPercent)}
+        </section>
+        <div class="viaduct-girder-v2-tabs" role="tablist" aria-label="Kiriş kayıt türü">
+            <button type="button" role="tab" data-girder-view="production" aria-selected="${viaductGirderV2View === "production"}">İmalat</button>
+            <button type="button" role="tab" data-girder-view="installation" aria-selected="${viaductGirderV2View === "installation"}">Montaj</button>
+        </div>
+        <div class="viaduct-girder-v2-list" role="tabpanel">
+            ${viaductGirderV2View === "production"
+                ? createViaductGirderProduction(viaductGirderV2Data.production)
+                : createViaductGirderInstallations(viaductGirderV2Data.installations, viaductGirderV2Data.spans)}
+        </div>
+    `);
+    viaductDetailContent?.querySelectorAll("[data-girder-view]").forEach((button) => {
+        button.addEventListener("click", () => {
+            const next = button.dataset.girderView;
+            if (next === viaductGirderV2View) return;
+            viaductGirderV2View = next;
+            if (viaductGirderV2Data[next === "installation" ? "installations" : "production"])
+                renderViaductGirderV2();
+            else loadViaductGirderV2();
+        });
+    });
+}
+
+function createViaductGirderProduction(rows) {
+    if (!Array.isArray(rows) || !rows.length) return createViaductOperationalEmpty();
+    return `<p class="viaduct-girder-v2-note">Üretim kodları montaj konumlarıyla fiziksel olarak eşleştirilmez.</p>
+        <div class="viaduct-girder-v2-scroll"><table class="viaduct-girder-v2-table">
+            <thead><tr><th>Kod</th><th>Üretim Tarihi</th><th>Miktar</th><th>Boy</th><th>Donatı</th><th>Beton</th></tr></thead>
+            <tbody>${rows.map((row) => `<tr>
+                <th scope="row">${escapeViaductHtml(formatViaductValue(row.production_code))}</th>
+                <td>${escapeViaductHtml(formatViaductDate(row.production_date))}</td>
+                <td>${escapeViaductHtml(formatViaductMetric(row.quantity, "adet"))}</td>
+                <td>${escapeViaductHtml(formatViaductMeters(row.length_m))}</td>
+                <td>${escapeViaductHtml(formatViaductMetric(row.rebar_quantity_kg, "kg"))}</td>
+                <td>${escapeViaductHtml(formatViaductMetric(row.concrete_quantity_m3, "m³"))}</td>
+            </tr>`).join("")}</tbody></table></div>`;
+}
+
+function createViaductGirderInstallations(rows, spans) {
+    if (!Array.isArray(rows) || !rows.length || !Array.isArray(spans)) return createViaductOperationalEmpty();
+    const bySpan = new Map();
+    rows.forEach((row) => {
+        if (!bySpan.has(row.span_code)) bySpan.set(row.span_code, []);
+        bySpan.get(row.span_code).push(row);
+    });
+    return `<p class="viaduct-girder-v2-note">Montaj konumları üretim kodlarıyla ilişkilendirilmez.</p>
+        <div class="viaduct-span-list">${spans.map((span) => {
+            const positions = bySpan.get(span.span_code) ?? [];
+            return `<details class="viaduct-structure-card viaduct-girder-v2-span">
+                <summary><strong>${escapeViaductHtml(span.span_code)}</strong>
+                    <span>${escapeViaductHtml(formatViaductCount(span.installed_count))} / ${escapeViaductHtml(formatViaductCount(span.planned_count))} monte · ${escapeViaductHtml(formatGirderV2Status(span.installation_progress_status))}</span></summary>
+                <div class="viaduct-girder-v2-scroll"><table class="viaduct-girder-v2-table">
+                    <thead><tr><th>Konum</th><th>Durum</th><th>Montaj Tarihi</th></tr></thead>
+                    <tbody>${positions.map((row) => `<tr><th scope="row">${escapeViaductHtml(row.girder_slot)}</th>
+                        <td>${escapeViaductHtml(formatGirderV2Status(row.installation_status))}</td>
+                        <td>${escapeViaductHtml(formatViaductDate(row.installation_date))}</td></tr>`).join("")}</tbody>
+                </table></div>
+            </details>`;
+        }).join("")}</div>`;
+}
+
+function formatGirderV2Status(value) {
+    return ({ INSTALLED: "Monte edildi", NOT_INSTALLED: "Monte edilmedi", COMPLETED: "Tamamlandı",
+        IN_PROGRESS: "Devam Ediyor", NOT_STARTED: "Başlanmadı", UNKNOWN: "Bilinmiyor" })[value] ?? "Bilinmiyor";
+}
+
 async function loadViaductSpans(force = false) {
     const assetId = activeViaductAssetId;
 
@@ -762,6 +896,8 @@ function bindViaductRetryButtons() {
         button.addEventListener("click", () => {
             if (button.dataset.viaductRetry === "structures") {
                 loadViaductStructures(true);
+            } else if (button.dataset.viaductRetry === "girder-v2") {
+                loadViaductGirderV2(true);
             } else {
                 loadViaductSpans(true);
             }
