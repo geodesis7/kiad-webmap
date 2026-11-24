@@ -265,15 +265,19 @@ function createSpanSvg(span, index, supports, byId, spacing, axisY) {
     const accessibleLabel = `${span.code ?? "Span"}: ${componentLabel} ${componentStatusLabel(component)}`;
     return `<g class="itinerary-span" tabindex="0" role="button" data-itinerary-span-id="${escapeItinerary(span.id)}" aria-label="${escapeItinerary(accessibleLabel)}">
         ${deck ? createSpanDeckSvg(deck, start, end, axisY) : ""}
-        <rect x="${start + 10}" y="${axisY - 34}" width="${Math.max(20, end - start - 20)}" height="14" rx="2" class="itinerary-girder-beam ${statusClass(component?.status)} ${component?.girder_v2 && component.status === "UNKNOWN" ? "is-girder-v2-unknown" : ""}" />
-        ${createSpanGirderLabel(component, componentLabel, start, end, axisY)}
+        ${createSpanGirderSvg(component, componentLabel, start, end, axisY, span.code)}
         <text x="${(start + end) / 2}" y="${axisY - 10}" class="itinerary-span-label">${escapeItinerary(formatSpanLabel(span))}</text>
     </g>`;
 }
 
-function createSpanGirderLabel(component, label, start, end, axisY) {
-    if (!component || (itineraryData?.structure?.type !== "BRIDGE" && !component.girder_v2)) return "";
-    return `<text x="${(start + end) / 2}" y="${axisY - 23}" class="itinerary-component-label">${escapeItinerary(label)} ${escapeItinerary(statusMark(component.status))}</text>`;
+function createSpanGirderSvg(component, label, start, end, axisY, spanCode) {
+    const isViaductGirder = itineraryData?.structure?.type === "VIADUCT" && component?.type === "GIRDER_GROUP";
+    const beam = `<rect x="${start + 10}" y="${axisY - 34}" width="${Math.max(20, end - start - 20)}" height="14" rx="2" class="itinerary-girder-beam ${statusClass(component?.status)} ${component?.girder_v2 && component.status === "UNKNOWN" ? "is-girder-v2-unknown" : ""} ${isViaductGirder && component.status === "UNKNOWN" ? "is-viaduct-girder-unknown" : ""}" />`;
+    const labelSvg = component && (itineraryData?.structure?.type === "BRIDGE" || component.girder_v2 || isViaductGirder)
+        ? `<text x="${(start + end) / 2}" y="${axisY - 23}" class="itinerary-component-label">${escapeItinerary(label)} ${escapeItinerary(statusMark(component.status))}</text>`
+        : "";
+    if (!isViaductGirder) return beam + labelSvg;
+    return `<g class="itinerary-component is-girder ${statusClass(component.status)} ${qualityClass(component.quality)}" tabindex="0" role="button" data-itinerary-component="${escapeItinerary(component.id)}" aria-label="${escapeItinerary(`${spanCode ?? "Açıklık"} ${label}: ${componentStatusLabel(component)}`)}">${beam}${labelSvg}</g>`;
 }
 
 function createSpanDeckSvg(component, start, end, axisY) {
@@ -365,7 +369,10 @@ function bindItinerarySelections(data) {
     itineraryContent.querySelectorAll("[data-itinerary-component]").forEach(node => {
         const activate = event => { event?.stopPropagation(); selectItineraryComponent(byId.get(String(node.dataset.itineraryComponent))); };
         node.addEventListener("click", activate);
-        node.addEventListener("keydown", event => activateItineraryKeyboard(event, () => activate(event)));
+        node.addEventListener("keydown", event => {
+            if (event.key === "Enter" || event.key === " ") event.stopPropagation();
+            activateItineraryKeyboard(event, () => activate(event));
+        });
     });
     itineraryContent.querySelectorAll("[data-itinerary-span-id]").forEach(node => {
         node.addEventListener("click", () => selectItinerarySpan(node.dataset.itinerarySpanId));
@@ -507,11 +514,15 @@ function createSpanDetail(span, data) {
 
 function createComponentDetail(component, data) {
     const progress = component.progress ?? {};
+    const isViaductGirder = data.structure?.type === "VIADUCT" && (component.type ?? component.component_type) === "GIRDER_GROUP";
     const plannedQuantity = component.planned_quantity ?? progress.planned_count;
-    const completedQuantity = component.completed_quantity ?? progress.completed_count;
+    const completedQuantity = isViaductGirder
+        ? (component.installed_count ?? progress.installed_count ?? (component.girder_v2 ? component.completed_quantity : null))
+        : (component.completed_quantity ?? progress.completed_count);
+    const installationPercent = component.installation_progress_percent ?? progress.installation_progress_percent;
     const typeKicker = data.structure?.type === "BRIDGE" ? "" : (component.type ?? "OTHER");
     return `<h3>${escapeItinerary(componentPresentation(component).label)}</h3><p class="itinerary-detail-kicker">${escapeItinerary(typeKicker)}</p><dl class="itinerary-detail-list">
-        ${detailRow("Durum", componentStatusLabel(component))}${detailRow("Tasarım kapsamı", formatDesignPresence(component.design_presence ?? component.design_state))}${detailRow("Durum nedeni", formatStatusReason(component.status_reason))}${detailRow("Kaynak açıklık kodu", component.source_span_code)}${detailRow("Doğrulanan konum", component.verified_positions)}${detailRow("Başlangıç", component.actual_start)}${detailRow("Bitiş", component.actual_finish)}${detailRow("Son aktivite", component.last_activity)}${detailRow("Planlanan miktar", plannedQuantity == null ? null : `${plannedQuantity}${component.unit ? ` ${component.unit}` : ""}`)}${detailRow("Tamamlanan miktar", completedQuantity == null ? null : `${completedQuantity}${component.unit ? ` ${component.unit}` : ""}`)}${detailRow("İlerleme", component.progress_percent == null ? null : `${component.progress_percent}%`)}${detailRow("Kalite", qualityText(component.quality))}${detailRow("Veri tarihi", data.dataAsOf)}</dl>`;
+        ${detailRow("Durum", componentStatusLabel(component))}${detailRow("Tasarım kapsamı", formatDesignPresence(component.design_presence ?? component.design_state))}${detailRow("Durum nedeni", formatStatusReason(component.status_reason))}${detailRow("Kaynak açıklık kodu", component.source_span_code)}${detailRow("Doğrulanan konum", component.verified_positions)}${detailRow("Başlangıç", component.actual_start)}${detailRow("Bitiş", component.actual_finish)}${detailRow("Son aktivite", component.last_activity)}${detailRow(isViaductGirder ? "Planlanan kiriş" : "Planlanan miktar", plannedQuantity == null ? null : `${plannedQuantity}${isViaductGirder ? " adet" : component.unit ? ` ${component.unit}` : ""}`)}${detailRow(isViaductGirder ? "Monte edilen kiriş" : "Tamamlanan miktar", completedQuantity == null ? null : `${completedQuantity}${isViaductGirder ? " adet" : component.unit ? ` ${component.unit}` : ""}`)}${detailRow(isViaductGirder ? "Montaj ilerlemesi" : "İlerleme", (isViaductGirder ? installationPercent : component.progress_percent) == null ? null : `${isViaductGirder ? installationPercent : component.progress_percent}%`)}${detailRow("Kalite", qualityText(component.quality))}${detailRow("Veri tarihi", data.dataAsOf)}</dl>`;
 }
 
 function detailRow(label, value) { return value == null || value === "" ? "" : `<div><dt>${escapeItinerary(label)}</dt><dd>${escapeItinerary(String(value))}</dd></div>`; }
@@ -530,8 +541,9 @@ function componentPresentation(component = {}) {
     const bridgeLabels = itineraryData?.structure?.type === "BRIDGE" ? {
         PILE_GROUP: "Kazık", GIRDER_GROUP: "Prekast Kiriş Grubu", DECK_SLAB: "Döşeme"
     } : {};
+    const viaductLabels = itineraryData?.structure?.type === "VIADUCT" ? { GIRDER_GROUP: "Prekast Kiriş Grubu" } : {};
     const presentation = ITINERARY_COMPONENT_PRESENTATION[type] ?? { label: component.label ?? type, kind: "other" };
-    return { ...presentation, label: bridgeLabels[type] ?? presentation.label };
+    return { ...presentation, label: bridgeLabels[type] ?? viaductLabels[type] ?? presentation.label };
 }
 function qualityClass(value) {
     const levels = Array.isArray(value) ? value.map(item => item?.level) : [typeof value === "object" ? value?.level : value];
