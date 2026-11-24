@@ -246,7 +246,8 @@ function createItinerarySvg(supports, spans) {
     const width = Math.max(760, (supports.length - 1) * spacing + 160);
     const axisY = 88;
     const byId = new Map(supports.map((support, index) => [String(support.id), { support, index }]));
-    return `<svg class="itinerary-svg" viewBox="0 0 ${width} 340" role="img" aria-label="Yapı itinereiri">
+    const isViaduct = itineraryData?.structure?.type === "VIADUCT";
+    return `<svg class="itinerary-svg" viewBox="0 ${isViaduct ? -12 : 0} ${width} ${isViaduct ? 352 : 340}" role="${isViaduct ? "group" : "img"}" aria-label="Yapı itinereiri">
         <line class="itinerary-axis" x1="80" y1="${axisY}" x2="${width - 80}" y2="${axisY}" />
         ${spans.map((span, index) => createSpanSvg(span, index, supports, byId, spacing, axisY)).join("")}
         ${supports.map((support, index) => createSupportSvg(support, index, spacing, axisY)).join("")}
@@ -259,25 +260,52 @@ function createSpanSvg(span, index, supports, byId, spacing, axisY) {
     const start = from ? 80 + from.index * spacing : 80 + index * spacing;
     const end = to ? 80 + to.index * spacing : start + spacing;
     const components = orderComponents(span.components);
+    if (itineraryData?.structure?.type === "VIADUCT") {
+        const girder = components.find(c => (c.type ?? c.component_type) === "GIRDER_GROUP" && c.design_presence !== false);
+        const deck = components.find(c => ["DECK", "DECK_SLAB"].includes(c.type ?? c.component_type) && c.design_presence !== false);
+        const spanLabel = formatSpanLabel(span);
+        return `<g>
+            ${deck ? createViaductSuperstructureSvg(deck, span.code, start, end, axisY - 84) : ""}
+            ${girder ? createViaductSuperstructureSvg(girder, span.code, start, end, axisY - 51) : ""}
+            <g class="itinerary-span" tabindex="0" role="button" data-itinerary-span-id="${escapeItinerary(span.id)}" aria-label="${escapeItinerary(spanLabel)}">
+                <text x="${(start + end) / 2}" y="${axisY - 10}" class="itinerary-span-label">${escapeItinerary(spanLabel)}</text>
+            </g>
+        </g>`;
+    }
     const component = components.find(c => c.type === "GIRDER_GROUP") ?? components[0];
     const deck = components.find(c => ["DECK", "DECK_SLAB"].includes(c.type ?? c.component_type));
     const componentLabel = componentPresentation(component).label;
     const accessibleLabel = `${span.code ?? "Span"}: ${componentLabel} ${componentStatusLabel(component)}`;
     return `<g class="itinerary-span" tabindex="0" role="button" data-itinerary-span-id="${escapeItinerary(span.id)}" aria-label="${escapeItinerary(accessibleLabel)}">
         ${deck ? createSpanDeckSvg(deck, start, end, axisY) : ""}
-        ${createSpanGirderSvg(component, componentLabel, start, end, axisY, span.code)}
+        ${createSpanGirderSvg(component, componentLabel, start, end, axisY)}
         <text x="${(start + end) / 2}" y="${axisY - 10}" class="itinerary-span-label">${escapeItinerary(formatSpanLabel(span))}</text>
     </g>`;
 }
 
-function createSpanGirderSvg(component, label, start, end, axisY, spanCode) {
-    const isViaductGirder = itineraryData?.structure?.type === "VIADUCT" && component?.type === "GIRDER_GROUP";
-    const beam = `<rect x="${start + 10}" y="${axisY - 34}" width="${Math.max(20, end - start - 20)}" height="14" rx="2" class="itinerary-girder-beam ${statusClass(component?.status)} ${component?.girder_v2 && component.status === "UNKNOWN" ? "is-girder-v2-unknown" : ""} ${isViaductGirder && component.status === "UNKNOWN" ? "is-viaduct-girder-unknown" : ""}" />`;
-    const labelSvg = component && (itineraryData?.structure?.type === "BRIDGE" || component.girder_v2 || isViaductGirder)
+function createSpanGirderSvg(component, label, start, end, axisY) {
+    const beam = `<rect x="${start + 10}" y="${axisY - 34}" width="${Math.max(20, end - start - 20)}" height="14" rx="2" class="itinerary-girder-beam ${statusClass(component?.status)}" />`;
+    const labelSvg = component && itineraryData?.structure?.type === "BRIDGE"
         ? `<text x="${(start + end) / 2}" y="${axisY - 23}" class="itinerary-component-label">${escapeItinerary(label)} ${escapeItinerary(statusMark(component.status))}</text>`
         : "";
-    if (!isViaductGirder) return beam + labelSvg;
-    return `<g class="itinerary-component is-girder ${statusClass(component.status)} ${qualityClass(component.quality)}" tabindex="0" role="button" data-itinerary-component="${escapeItinerary(component.id)}" aria-label="${escapeItinerary(`${spanCode ?? "Açıklık"} ${label}: ${componentStatusLabel(component)}`)}">${beam}${labelSvg}</g>`;
+    return beam + labelSvg;
+}
+
+function viaductGirderInstallationStatus(component) {
+    return !component.girder_v2
+        ? (component.installation_status ?? "UNKNOWN")
+        : component.status;
+}
+
+function createViaductSuperstructureSvg(component, spanCode, start, end, y) {
+    const { label, kind } = componentPresentation(component);
+    const status = kind === "girder" ? viaductGirderInstallationStatus(component) : component.status;
+    const width = Math.max(20, end - start - 12);
+    return `<g class="itinerary-component itinerary-viaduct-superstructure is-${kind} ${statusClass(status)}" tabindex="0" role="button" data-itinerary-component="${escapeItinerary(component.id)}" aria-label="${escapeItinerary(`${spanCode ?? "Açıklık"} ${label}: ${statusLabel(status)}`)}">
+        <rect x="${start + 6}" y="${y}" width="${width}" height="23" rx="3"/>
+        <text x="${start + 6 + (width - 18) / 2}" y="${y + 15}" class="itinerary-component-label">${escapeItinerary(label)}</text>
+        <text x="${start + width - 5}" y="${y + 15}" class="itinerary-component-label itinerary-superstructure-mark" aria-hidden="true">${statusMark(status)}</text>
+    </g>`;
 }
 
 function createSpanDeckSvg(component, start, end, axisY) {
@@ -370,7 +398,6 @@ function bindItinerarySelections(data) {
         const activate = event => { event?.stopPropagation(); selectItineraryComponent(byId.get(String(node.dataset.itineraryComponent))); };
         node.addEventListener("click", activate);
         node.addEventListener("keydown", event => {
-            if (event.key === "Enter" || event.key === " ") event.stopPropagation();
             activateItineraryKeyboard(event, () => activate(event));
         });
     });
@@ -394,7 +421,13 @@ function bindItineraryPan() {
     const canvas = itineraryContent.querySelector(".itinerary-canvas");
     if (!canvas) return;
     let startX = 0; let startScroll = 0; let dragging = false;
-    canvas.addEventListener("pointerdown", event => { dragging = true; startX = event.clientX; startScroll = canvas.scrollLeft; canvas.setPointerCapture(event.pointerId); });
+    canvas.addEventListener("pointerdown", event => {
+        if (event.target.closest?.(".itinerary-viaduct-superstructure, [data-itinerary-span-id]") && itineraryData?.structure?.type === "VIADUCT") return;
+        dragging = true;
+        startX = event.clientX;
+        startScroll = canvas.scrollLeft;
+        canvas.setPointerCapture(event.pointerId);
+    });
     canvas.addEventListener("pointermove", event => { if (dragging) setItineraryScrollLeft(canvas, startScroll - (event.clientX - startX)); });
     canvas.addEventListener("pointerup", () => { dragging = false; });
     canvas.addEventListener("wheel", event => { if (Math.abs(event.deltaY) > Math.abs(event.deltaX)) { setItineraryScrollLeft(canvas, canvas.scrollLeft + event.deltaY); event.preventDefault(); } }, { passive: false });
@@ -528,6 +561,9 @@ function createComponentDetail(component, data) {
 function detailRow(label, value) { return value == null || value === "" ? "" : `<div><dt>${escapeItinerary(label)}</dt><dd>${escapeItinerary(String(value))}</dd></div>`; }
 function statusLabel(value) { return ITINERARY_STATUS_LABELS[String(value ?? "UNKNOWN").toUpperCase()] ?? String(value ?? "Bilinmiyor"); }
 function componentStatusLabel(component = {}) {
+    if (itineraryData?.structure?.type === "VIADUCT" && (component.type ?? component.component_type) === "GIRDER_GROUP") {
+        return statusLabel(viaductGirderInstallationStatus(component));
+    }
     if (String(component.status ?? "").toUpperCase() === "UNKNOWN" && String(component.status_reason ?? "").toUpperCase() === "DESIGN_PRESENT_NO_PROGRESS") return "İlerleme verisi yok";
     return statusLabel(component.status);
 }
