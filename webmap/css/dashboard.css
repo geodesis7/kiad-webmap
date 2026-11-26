@@ -1206,6 +1206,12 @@
     font-weight: 700;
 }
 
+.dashboard-forecast-lifecycle {
+    max-width: 220px;
+    margin-bottom: 4px;
+    white-space: normal;
+}
+
 .dashboard-trend,
 .dashboard-faces {
     height: 100%;

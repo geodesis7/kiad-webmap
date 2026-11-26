@@ -1835,17 +1835,21 @@ function createDashboardForecastGroup(title, forecasts) {
     `;
 }
 
-function createDashboardForecastRow(forecast = {}) {
-    const code = formatTunnelFallback(forecast.asset_code);
-    const name = forecast.asset_name || "";
-    const stateLabel = getTunnelForecastStateLabel(forecast);
+function createDashboardForecastRow(response = {}) {
+    const code = formatTunnelFallback(response.asset_code);
+    const name = response.asset_name || "";
+    const { forecast, notice, sourceLabel, technicalNote } = getTunnelForecastPresentation(response);
+    const lifecycleLabel = [notice, sourceLabel].filter(Boolean).join(" ");
+    const lifecycleStatus = lifecycleLabel
+        ? `<div class="dashboard-forecast-state dashboard-forecast-lifecycle" title="${escapeDashboardHtml(technicalNote)}">${escapeDashboardHtml(lifecycleLabel)}</div>`
+        : "";
 
-    if (!isTunnelForecastAvailable(forecast)) {
+    if (!forecast || !isTunnelForecastAvailable(forecast)) {
         return `
-            <tr class="dashboard-forecast-row is-unavailable" data-dashboard-tunnel-id="${Number(forecast.asset_id)}"
+            <tr class="dashboard-forecast-row is-unavailable" data-dashboard-tunnel-id="${Number(response.asset_id)}"
                 tabindex="0" aria-label="${escapeDashboardHtml(`${code} tünel detayını aç`)}">
                 <th scope="row"><strong>${escapeDashboardHtml(code)}</strong>${name ? `<small>${escapeDashboardHtml(name)}</small>` : ""}</th>
-                <td colspan="8"><span class="dashboard-forecast-state">Tahmin: ${escapeDashboardHtml(stateLabel)}</span></td>
+                <td colspan="8">${lifecycleStatus}${forecast ? `<span class="dashboard-forecast-state">Tahmin: ${escapeDashboardHtml(getTunnelForecastStateLabel(forecast))}</span>` : ""}</td>
             </tr>
         `;
     }
@@ -1857,7 +1861,7 @@ function createDashboardForecastRow(forecast = {}) {
     const title = technicalNotes.join(" · ");
 
     return `
-        <tr class="dashboard-forecast-row" data-dashboard-tunnel-id="${Number(forecast.asset_id)}"
+        <tr class="dashboard-forecast-row" data-dashboard-tunnel-id="${Number(response.asset_id)}"
             tabindex="0" aria-label="${escapeDashboardHtml(`${code} tünel detayını aç`)}">
             <th scope="row"><strong>${escapeDashboardHtml(code)}</strong>${name ? `<small>${escapeDashboardHtml(name)}</small>` : ""}</th>
             <td>${escapeDashboardHtml(formatTunnelForecastRate(forecast.v30))}</td>
@@ -1865,7 +1869,7 @@ function createDashboardForecastRow(forecast = {}) {
             <td>${escapeDashboardHtml(formatTunnelForecastRate(forecast.v90))}</td>
             <td>${escapeDashboardHtml(formatTunnelForecastRate(forecast.projected_rate))}</td>
             <td>${escapeDashboardHtml(formatTunnelForecastMeters(forecast.remaining_excavation_m))}</td>
-            <td>${escapeDashboardHtml(formatTunnelForecastDate(forecast.estimated_finish_date))}</td>
+            <td>${lifecycleStatus}${escapeDashboardHtml(formatTunnelForecastDate(forecast.estimated_finish_date))}</td>
             <td>${escapeDashboardHtml(trend ? `${trend.symbol} ${trend.label}` : "—")}</td>
             <td title="${escapeDashboardHtml(title)}">${escapeDashboardHtml(confidence ?? "—")}${notes.length ? `<small>${escapeDashboardHtml(notes.join(" · "))}</small>` : ""}</td>
         </tr>

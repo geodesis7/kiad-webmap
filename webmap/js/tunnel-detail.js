@@ -787,12 +787,18 @@ function createTunnelForecastLoading() {
     `;
 }
 
-function createTunnelForecastView(forecast = {}) {
-    if (!isTunnelForecastAvailable(forecast)) {
+function createTunnelForecastView(response = {}) {
+    const { forecast, notice, sourceLabel, technicalNote } = getTunnelForecastPresentation(response);
+    const lifecycleStatus = notice
+        ? `<p class="tunnel-forecast-state">${escapeTunnelDetailHtml([notice, sourceLabel].filter(Boolean).join(" "))}</p>`
+        : "";
+    if (!forecast || !isTunnelForecastAvailable(forecast)) {
         return `
             <h3 id="tunnel-forecast-title">Tahmini Kazı Bitişi</h3>
-            <p class="tunnel-forecast-state">${escapeTunnelDetailHtml(getTunnelForecastStateLabel(forecast))}</p>
-            ${createTunnelForecastAsOf(forecast)}
+            ${lifecycleStatus}
+            ${forecast ? `<p class="tunnel-forecast-state">${escapeTunnelDetailHtml(getTunnelForecastStateLabel(forecast))}</p>` : ""}
+            ${createTunnelForecastTechnicalNote(technicalNote)}
+            ${forecast ? createTunnelForecastAsOf(forecast) : ""}
         `;
     }
 
@@ -800,6 +806,9 @@ function createTunnelForecastView(forecast = {}) {
     const confidence = getTunnelForecastConfidenceLabel(forecast);
     const qualityNotes = getTunnelForecastQualityNotes(forecast);
     const technicalNotes = getTunnelForecastTechnicalNotes(forecast);
+    if (technicalNote) {
+        technicalNotes.push(technicalNote);
+    }
     const speeds = [
         ["30 gün", forecast.v30],
         ["60 gün", forecast.v60],
@@ -808,6 +817,7 @@ function createTunnelForecastView(forecast = {}) {
 
     return `
         <h3 id="tunnel-forecast-title">Tahmini Kazı Bitişi</h3>
+        ${lifecycleStatus}
         <strong class="tunnel-forecast-date">${escapeTunnelDetailHtml(formatTunnelForecastDate(forecast.estimated_finish_date, true))}</strong>
         <dl class="tunnel-forecast-primary">
             ${createTunnelForecastMetric("Projeksiyon hızı", formatTunnelForecastRate(forecast.projected_rate))}
@@ -818,9 +828,15 @@ function createTunnelForecastView(forecast = {}) {
             ${speeds.map(([label, value]) => createTunnelForecastMetric(label, formatTunnelForecastRate(value))).join("")}
         </dl>
         ${qualityNotes.length ? `<p class="tunnel-forecast-quality">${escapeTunnelDetailHtml(qualityNotes.join(" · "))}</p>` : ""}
-        ${technicalNotes.length ? `<p class="tunnel-forecast-technical" title="${escapeTunnelDetailHtml(technicalNotes.join(" · "))}">Veri notu</p>` : ""}
+        ${createTunnelForecastTechnicalNote(technicalNotes.join(" · "))}
         ${createTunnelForecastAsOf(forecast)}
     `;
+}
+
+function createTunnelForecastTechnicalNote(note) {
+    return note
+        ? `<p class="tunnel-forecast-technical" title="${escapeTunnelDetailHtml(note)}">Veri notu</p>`
+        : "";
 }
 
 function createTunnelForecastMetric(label, value, description = "") {
